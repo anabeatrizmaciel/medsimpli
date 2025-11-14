@@ -1,0 +1,65 @@
+termo,tecnico,simplificado,fonte
+Hipertensão Arterial Sistêmica,O paciente apresenta Hipertensão Arterial Sistêmica com níveis pressóricos persistentemente elevados apesar de medidas não farmacológicas.,"Pressão alta constante, mesmo com cuidados básicos.",Fiocruz – Manual de Hipertensão
+Losartana Potássica,Losartana Potássica foi prescrita para o tratamento da hipertensão e para redução de eventos cardiovasculares em pacientes com hipertrofia ventricular esquerda.,Remédio para controlar pressão alta e proteger o coração.,ANVISA – Bula do Paciente (Losartana)
+Hidroclorotiazida,Hidroclorotiazida é utilizada como diurético tiazídico no manejo da hipertensão e do edema.,Diurético que ajuda a eliminar líquido e baixar a pressão.,ANVISA – Bula do Paciente (Hidroclorotiazida)
+Enalapril,"Enalapril, um inibidor da ECA, é indicado para insuficiência cardíaca e hipertensão arterial.",Medicamento para pressão alta e coração fraco.,ANVISA – Bula do Paciente (Enalapril)
+Atenolol,"Atenolol atua como betabloqueador, reduzindo a frequência cardíaca e a pressão arterial.",Remédio que diminui batimentos e pressão.,ANVISA – Bula do Paciente (Atenolol)
+Ácido Acetilsalicílico (AAS),Ácido Acetilsalicílico em baixa dose é utilizado como antiagregante plaquetário na prevenção de eventos cardiovasculares.,AAS em dose baixa ajuda a prevenir derrame e infarto.,ANVISA – Bula do Paciente (AAS)
+Clopidogrel,Clopidogrel é indicado para reduzir o risco de eventos aterotrombóticos em pacientes com síndrome coronariana aguda.,Remédio que evita coágulos em pessoas com problema no coração.,ANVISA – Bula do Paciente (Clopidogrel)
+Insuficiência Cardíaca,"Ecodopplercardiograma demonstra fração de ejeção reduzida, compatível com Insuficiência Cardíaca com fração de ejeção reduzida.",O coração está fraco e bombeia menos sangue.,SUS – Diretrizes de Insuficiência Cardíaca
+Taquicardia Sinusal,Eletrocardiograma evidencia Taquicardia Sinusal com frequência cardíaca de 110 bpm em repouso.,Coração batendo acelerado mesmo parado.,Hospital Albert Einstein – Guia ECG
+Bradicardia,"Paciente com Bradicardia assintomática, FC média de 48 bpm, sem bloqueios de condução.","Coração batendo mais devagar que o normal, mas sem sintomas.",Hospital Sírio‑Libanês – Cardiologia
+Fibrilação Atrial,"Traçado eletrocardiográfico compatível com Fibrilação Atrial, ritmo irregular e ausência de ondas P.","Ritmo do coração irregular, aumentando risco de coágulos.",SBC – Sociedade Brasileira de Cardiologia
+Hipertrofia Ventricular Esquerda,Sinais eletrocardiográficos e ecocardiográficos de Hipertrofia Ventricular Esquerda.,Parede do coração (lado esquerdo) está mais grossa que o normal.,SBC – Diretrizes ECG
+Angina Estável,"Dor torácica típica aos esforços, aliviada com repouso e nitrato, sugestiva de Angina Estável.",Dor no peito ao fazer esforço que melhora quando descansa.,SUS – Protocolo de Dor Torácica
+Infarto Agudo do Miocárdio,"Marcadores de necrose miocárdica elevados e alterações isquêmicas no ECG, compatíveis com Infarto Agudo do Miocárdio.","Ataque do coração, com parte do músculo sofrendo por falta de sangue.",SUS – Linha de Cuidado IAM
+Dispneia,"Paciente refere Dispneia aos esforços, com saturação de O2 em 92% ao ar ambiente.",Falta de ar ao fazer esforço.,SUS – Acolhimento em Urgência Respiratória
+Asma,Quadro de Asma com sibilância à ausculta e resposta a broncodilatador inalatória.,Crises de chiado no peito que melhoram com bombinha.,SUS – Protocolo de Asma
+DPOC,Histórico de tabagismo importante e espirometria compatível com DPOC moderada.,"Doença do pulmão em quem fumou por muito tempo, com falta de ar.",SUS – Protocolo de DPOC
+Bronquite Crônica,"Tosse produtiva por mais de 3 meses em 2 anos consecutivos, sugerindo Bronquite Crônica.",Tosse com catarro que volta todos os anos por muito tempo.,Fiocruz – Doenças Respiratórias
+Pneumonia,"Radiografia de tórax com consolidação no lobo inferior direito, compatível com Pneumonia adquirida na comunidade.",Infecção no pulmão confirmada no raio‑X.,SUS – Protocolo Pneumonia
+Hipoxemia,Paciente em Hipoxemia com PaO2 reduzida em gasometria arterial.,Oxigênio baixo no sangue.,SUS – Atenção às Urgências
+Espirometria,Espirometria demonstra padrão obstrutivo com VEF1/CVF reduzido.,Exame do sopro mostra passagem de ar mais difícil.,SUS – Manual de Espirometria
+Cefaleia Tensional Crônica,"Exame clínico compatível com Cefaleia Tensional Crônica, sem sinais de alarme neurológico.","Dor de cabeça frequente causada por tensão, sem sinais graves.",Fiocruz – Cefaleias
+Enxaqueca sem Aura,"Episódios recorrentes de dor unilateral pulsátil com fotofobia, sugerindo Enxaqueca sem Aura.",Crises de dor de cabeça forte com sensibilidade à luz.,Ministério da Saúde – Protocolo de Cefaleia
+Acidente Vascular Cerebral (AVC) Isquêmico,"TC de crânio sem sangramento e quadro focal súbito, compatível com AVC Isquêmico.",Derrame por entupimento de vaso no cérebro.,SUS – Linha de Cuidado AVC
+Ataque Isquêmico Transitório (AIT),"Sintomas neurológicos focais de curta duração e resolução espontânea, compatíveis com AIT.",Sinais de derrame que passam em pouco tempo.,SUS – Linha de Cuidado AVC
+Parestesia,Paciente relata Parestesia em mãos e pés sem perda de força.,Formigamento nas mãos e nos pés.,Einstein – Neurologia Clínica
+Crise Convulsiva,Evento de Crise Convulsiva tônico‑clônica generalizada com recuperação pós‑ictal.,Convulsão com movimentos do corpo e confusão depois.,SUS – Urgência e Emergência
+Epilepsia,"História de crises recorrentes com EEG compatível, diagnóstico de Epilepsia confirmado.",Doença com convulsões repetidas.,Fiocruz – Epilepsia
+Vertigem Posicional Paroxística Benigna,"Manobra de Dix‑Hallpike positiva, confirmando Vertigem Posicional Paroxística Benigna.",Tontura que piora ao mudar de posição da cabeça.,Einstein – Otoneurologia
+Diabetes Mellitus Tipo 2,Cloridrato de Metformina indicado para Diabetes Mellitus Tipo 2 como monoterapia ou em associação.,"Diabetes tipo 2 tratado com metformina, às vezes junto de outros remédios.",ANVISA – Bula do Paciente (Metformina)
+Hipoglicemia,"Durante uso de Insulina NPH, glicemia de 48 mg/dL com sudorese e tremores, caracterizando Hipoglicemia.","Açúcar no sangue muito baixo, com suor e tremedeira.",SUS – Protocolo de Diabetes
+Hiperglicemia,Medições persistentes de glicemia capilar acima de 250 mg/dL indicam Hiperglicemia.,Açúcar no sangue muito alto.,SUS – Protocolo de Diabetes
+Insulina NPH,Insulina NPH de ação intermediária indicada para controle glicêmico basal.,Tipo de insulina que age por várias horas para controlar o açúcar.,ANVISA – Bula do Paciente (Insulina NPH)
+Insulina Regular,Insulina Regular utilizada para correção de hiperglicemia e controle prandial.,Insulina de ação rápida para usar perto das refeições.,ANVISA – Bula do Paciente (Insulina Regular)
+Hipotireoidismo,"TSH elevado e T4 livre reduzido, compatíveis com Hipotireoidismo clínico.","Tireoide funcionando menos, causando cansaço e ganho de peso.",SUS – Protocolo de Tireoide
+Levotiroxina Sódica,Levotiroxina Sódica indicada para reposição hormonal em Hipotireoidismo.,Hormônio da tireoide para tratar tireoide lenta.,ANVISA – Bula do Paciente (Levotiroxina)
+Gastrite,"Endoscopia digestiva alta com hiperemia difusa da mucosa gástrica, compatível com Gastrite.",Inflamação no estômago vista na endoscopia.,Einstein – Gastroenterologia
+Úlcera Gástrica,"Lesão ulcerada em pequena curvatura, positiva para Helicobacter pylori.",Ferida no estômago causada por bactéria.,SUS – Protocolo H. pylori
+Doença do Refluxo Gastroesofágico (DRGE),Sintomas de pirose e regurgitação com melhora ao uso de inibidor de bomba de prótons.,Queimação e volta de ácido do estômago para o esôfago.,SUS – Protocolo DRGE
+Insuficiência Renal Crônica,"Taxa de Filtração Glomerular persistentemente abaixo de 60 mL/min/1,73 m² por mais de 3 meses.",Rins funcionando fraco por muito tempo.,SBN – Sociedade Brasileira de Nefrologia
+Creatinina Elevada,"Creatinina sérica acima do limite de referência, sugerindo redução da função renal.",Exame de sangue indica rim trabalhando menos.,SUS – Nefrologia Básica
+Esteatose Hepática,"Ultrassonografia com aumento difuso da ecogenicidade hepática, compatível com Esteatose.",Acúmulo de gordura no fígado visto no ultrassom.,Fiocruz – Doenças do Fígado
+Hepatite Viral,"Sorologias positivas com transaminases elevadas, quadro compatível com Hepatite Viral.",Inflamação no fígado por vírus.,Ministério da Saúde – Hepatites Virais
+Diarreia Aguda,"Quadro de Diarreia Aguda com sinais de desidratação leve, orientada reidratação oral.",Evacuações líquidas recentes; precisa beber mais líquidos.,SUS – Atenção Básica (Diarreia)
+Constipação Intestinal,Relato de evacuações infrequentes e fezes endurecidas por mais de 3 meses.,Intestino preso por muito tempo.,Einstein – Coloproctologia
+Paracetamol,Paracetamol é indicado para alívio da dor leve a moderada e redução da febre.,Remédio para dor e febre.,ANVISA – Bula do Paciente (Paracetamol)
+Dipirona Monoidratada,"Dipirona é um analgésico e antitérmico indicado para dor e febre, com risco raro de agranulocitose.",Remédio para dor e febre; raramente pode baixar a defesa do sangue.,ANVISA – Bula do Paciente (Dipirona)
+Ibuprofeno,Ibuprofeno é um anti‑inflamatório não esteroidal indicado para dor e processos inflamatórios.,Remédio anti‑inflamatório para dor e inchaço.,ANVISA – Bula do Paciente (Ibuprofeno)
+Amoxicilina,Amoxicilina é um antibiótico beta‑lactâmico indicado para infecções bacterianas.,Antibiótico para tratar infecções por bactérias.,ANVISA – Bula do Paciente (Amoxicilina)
+Azitromicina,"Azitromicina é um macrolídeo indicado em infecções respiratórias, pele e tecidos moles.",Antibiótico que trata infecções de pulmão e pele.,ANVISA – Bula do Paciente (Azitromicina)
+Omeprazol,"Omeprazol inibe a bomba de prótons gástrica, reduzindo a produção de ácido.",Diminui a acidez do estômago para aliviar queimação.,ANVISA – Bula do Paciente (Omeprazol)
+Posologia,"A posologia deve ser ajustada conforme idade, função renal e resposta clínica.",A dose do remédio muda conforme a pessoa e os exames.,ANVISA – Bulas: seção Posologia
+Contraindicação,O medicamento é contraindicado em pacientes com hipersensibilidade ao princípio ativo.,Quem tem alergia ao remédio não deve usar.,ANVISA – Bulas: seção Contraindicações
+Interação Medicamentosa,"Interações medicamentosas podem alterar eficácia e segurança, exigindo ajuste de dose.",Misturar remédios pode mudar o efeito; às vezes precisa ajustar a dose.,ANVISA – Bulas: seção Interações
+Reação Alérgica,"Relato de urticária e prurido após uso do fármaco, sugerindo reação alérgica.",Coceira e placas na pele após tomar o remédio.,SUS – Alergologia Clínica
+Anafilaxia,Episódio súbito de anafilaxia com hipotensão e broncoespasmo; administrada adrenalina IM.,Alergia grave e rápida; tratada com injeção de adrenalina.,SUS – Urgências e Emergências
+Efeito Adverso,"Efeitos adversos incluem náusea, tontura e sonolência, geralmente autolimitados.","Reações indesejadas como enjoo e tontura, que costumam passar.",ANVISA – Bulas: seção Reações Adversas
+Adesão ao Tratamento,"Baixa adesão ao tratamento relatada, com esquemas de múltiplas tomadas diárias.",Dificuldade em tomar os remédios nos horários certos.,SUS – Atenção Básica (Acompanhamento)
+hepatotoxicidade aguda,"Lesão hepática induzida por medicamento ou substância química, com alteração de enzimas hepáticas. Trata-se de forma de início recente e evolução rápida.",dano no fígado por remédio (aguda), ANVISA – Bulas: seção Interações
+hepatotoxicidade crônica,"Lesão hepática induzida por medicamento ou substância química, com alteração de enzimas hepáticas. Trata-se de forma de evolução prolongada.",dano no fígado por remédio (crônica), ANVISA – Bulas: seção Interações
+hepatotoxicidade descompensada,"Lesão hepática induzida por medicamento ou substância química, com alteração de enzimas hepáticas. Trata-se de com piora clínica significativa.",dano no fígado por remédio (descompensada), ANVISA – Bulas: seção Interações
+hepatotoxicidade leve,"Lesão hepática induzida por medicamento ou substância química, com alteração de enzimas hepáticas. Trata-se de com sintomas discretos.",dano no fígado por remédio (leve), ANVISA – Bulas: seção Interações
+hepatotoxicidade moderada,"Lesão hepática induzida por medicamento ou substância química, com alteração de enzimas hepáticas. Trata-se de com sintomas de intensidade intermediária.",dano no fígado por remédio (moderada), ANVISA – Bulas: seção Interações
+hepatotoxicidade grave,"Lesão hepática induzida por medicamento ou substância química, com alteração de enzimas hepáticas. Trata-se de com risco aumentado de complicações.",dano no fígado por remédio (grave), ANVISA – Bulas: seção Interações
