@@ -6,6 +6,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
 import matplotlib.pyplot as plt
 import io
+import requests
 import random
 from datetime import datetime
 from gtts import gTTS
@@ -22,6 +23,11 @@ from sklearn.preprocessing import StandardScaler
 # =========================
 APP_TITLE = "MedSimpli"
 APP_TAGLINE = "Saúde em linguagem simples - IA aplicada à interpretação médica"
+
+# =========================
+# API
+# =========================
+API_URL = "http://127.0.0.1:8000"
 
 # =========================
 # CSS
@@ -189,27 +195,6 @@ def inject_base_css(dark=False):
 def load_default_data():
     return pd.read_csv("dados_saude_com_bulas.csv")
 
-def build_vectorizer():
-    portuguese_stopwords = list(text.ENGLISH_STOP_WORDS.union([
-        "de","da","do","das","dos","em","para","por","com",
-        "que","como","ou","uma","um","uns","umas","ao","aos",
-        "na","nas","no","nos","e","o","a","os","as","se"
-    ]))
-    return TfidfVectorizer(
-        strip_accents="unicode",
-        lowercase=True,
-        stop_words=portuguese_stopwords,
-        ngram_range=(1,2),
-        min_df=1
-    )
-
-def explain_contribution(query_vec, doc_vec, feature_names, top_k=5):
-    q = query_vec.toarray()[0]
-    d = doc_vec.toarray()[0]
-    contrib = q * d
-    idx = np.argsort(contrib)[::-1]
-    return [(feature_names[i], float(contrib[i])) for i in idx[:top_k] if contrib[i] > 0]
-
 def make_report_html(query, results, chips, scores_chart_png_b64=None):
     rows = []
     for rank, termo, simplif, score in results:
@@ -303,33 +288,14 @@ def main():
     st.markdown(f"<h1>🩺 {APP_TITLE}</h1>", unsafe_allow_html=True)
     st.markdown(f"<h4>{APP_TAGLINE}</h4>", unsafe_allow_html=True)
 
-    # --- Carregamento de dados ---
-    try:
-        df = pd.read_csv(uploaded) if uploaded else load_default_data()
-    except Exception as e:
-        st.error(f"Erro ao carregar CSV: {e}")
-        st.stop()
+    # # --- 🔍 Avaliação de acurácia (modo debug) ---
+    res = requests.get(f"{API_URL}/get_debug_accuracy")
 
-    expected_cols = {"termo", "tecnico", "simplificado"}
-    if not expected_cols.issubset(df.columns):
-        st.error("CSV inválido. As colunas obrigatórias são: termo, tecnico, simplificado.")
-        st.stop()
-
-    # --- Vetorização dupla ---
-    vectorizer_tecnico = build_vectorizer()
-    vectorizer_simplif = build_vectorizer()
-    tfidf_tecnico = vectorizer_tecnico.fit_transform(df["tecnico"].astype(str))
-    tfidf_simplif = vectorizer_simplif.fit_transform(df["simplificado"].astype(str))
-
-    # --- 🔍 Avaliação de acurácia (modo debug) ---
-    acertos = 0
-    for termo, esperado in zip(df['termo'], df['simplificado']):
-        query_vec = vectorizer_tecnico.transform([termo])
-        sims = cosine_similarity(query_vec, tfidf_tecnico)[0]
-        pred = df.iloc[np.argmax(sims)]['simplificado']
-        acertos += (pred == esperado)
-    acuracia = acertos / len(df)
-    st.sidebar.info(f"Acurácia aproximada: {acuracia:.2%}")
+    if res.status_code == 200:
+        acc = res.json()["acc"]
+        st.sidebar.info(f"Acurácia aproximada: {acc:.2%}")
+    else:
+        st.error("Erro ao calcular acurácia")
 
     # --- Sessão / Histórico ---
     if "history" not in st.session_state:
@@ -358,74 +324,55 @@ def main():
                 st.session_state.history.insert(0, query)
                 st.session_state.history = st.session_state.history[:6]
 
-            query_vec_tecnico = vectorizer_tecnico.transform([query])
-            query_vec_simplif = vectorizer_simplif.transform([query])
-
-            sims_tecnico = cosine_similarity(query_vec_tecnico, tfidf_tecnico)[0]
-            sims_simplif = cosine_similarity(query_vec_simplif, tfidf_simplif)[0]
-            sims = 0.5 * sims_tecnico + 0.5 * sims_simplif
-
-            # --- Boost semântico ---
-            for i, termo in enumerate(df["termo"]):
-                termo_lower = termo.lower()
-                query_lower = query.lower()
-                if termo_lower == query_lower:
-                    sims[i] += boost_strength
-                elif query_lower in termo_lower or termo_lower in query_lower:
-                    sims[i] += boost_strength / 2
-
-            idxs = np.argsort(sims)[::-1][:top_k]
-
             termos_plot, scores_plot = [], []
             st.session_state.last_results = []
             chips_global = ""
 
             st.markdown("## 💬 Explicações encontradas")
-            for rank, i in enumerate(idxs, start=1):
-                termo = df.iloc[i]["termo"]
-                simplif = df.iloc[i]["simplificado"]
-                score = sims[i] * 100
-                termos_plot.append(termo)
-                scores_plot.append(score)
+            res = requests.get(f"{API_URL}/recomendar_simplificacoes", params={"query": query, "top_k": top_k, "boost_strength": boost_strength})
+            if res.status_code == 200:
+                recomendacoes = res.json()
+                for rec in recomendacoes:
+                    st.markdown(f"""
+                    <div class="card">
+                        <h4>{rec["rank"]}. {rec["termo"]}</h4>
+                        <p><b>Similaridade:</b> {rec["score"]}%</p>
+                        <p><b>🩺 Tradução sugerida:</b></p>
+                        <div class="stSuccess">{rec["simplificado"]}</div>
+                    </div>
+                    """, unsafe_allow_html=True)
 
-                st.markdown(f"""
-                <div class="card">
-                    <h4>{rank}. {termo}</h4>
-                    <p><b>Similaridade:</b> {score:.1f}%</p>
-                    <p><b>🩺 Tradução sugerida:</b></p>
-                    <div class="stSuccess">{simplif}</div>
-                </div>
-                """, unsafe_allow_html=True)
-
-                # Termos semelhantes (mesmo vetor TF-IDF do "técnico" para mapa semântico)
-                doc_vec = tfidf_tecnico[i]
-                sims_to_doc = cosine_similarity(doc_vec, tfidf_tecnico)[0]
-                similar_idx = np.argsort(sims_to_doc)[::-1][1:6]  # ignora ele mesmo
-                similares = [df.iloc[j]["termo"] for j in similar_idx if sims_to_doc[j] > 0.15]
-                if similares:
-                    st.caption("🔗 Termos relacionados: " + " • ".join(similares))
-
-                # Chips (explicabilidade simples)
-                if show_explain:
-                    doc_vec_simplif = tfidf_simplif[i]
-                    feature_names = vectorizer_simplif.get_feature_names_out()
-                    top_terms = explain_contribution(query_vec_simplif, doc_vec_simplif, feature_names)
-                    if top_terms:
-                        chips = "  ".join([f"`{t}`" for t, _ in top_terms])
-                        chips_global = chips  # guarda o último para relatório
+                    res = requests.get(f"{API_URL}/termos_semelhantes", params={"index": rec["index"]})
+                    if res.status_code == 200:
+                        similares = res.json()["similares"]
+                        if similares:
+                            st.caption("🔗 Termos relacionados: " + " • ".join(similares))
+                    else:
+                        st.error("Erro ao buscar termos semelhantes")
+                    
+                    res = requests.get(f"{API_URL}/explicabilidade", params={"query": query, "index": rec["index"]})
+                    if res.status_code == 200:
+                        chips = res.json()["chips"]
                         st.caption(f"Contribuições de termos: {chips}")
+                    else:
+                        st.error("Erro ao gerar explicação das recomendações")
 
-                st.session_state.last_results.append((rank, termo, simplif, score))
+                    st.session_state.last_results.append((rec["rank"], rec["termo"], rec["simplificado"], rec["score"]))
+            else:
+                st.error("Erro ao gerar recomendações")
 
             # --- Mapa de similaridade ---
-            if termos_plot:
-                st.subheader("📊 Mapa de Similaridade")
-                fig, ax = plt.subplots()
-                ax.barh(termos_plot[::-1], scores_plot[::-1], color="#60a5fa" if not dark_mode else "#38bdf8")
-                ax.set_xlabel("Similaridade (%)")
-                ax.set_ylabel("Termos")
-                ax.set_title("Ranking de proximidade semântica")
-                st.pyplot(fig)
+            st.subheader("📊 Mapa de Similaridade")
+            for rec in recomendacoes[::-1]:
+                termos_plot.append(rec["termo"])
+                scores_plot.append(rec["score"])
+        
+            fig, ax = plt.subplots()
+            ax.barh(termos_plot[::], scores_plot[::], color="#60a5fa" if not dark_mode else "#38bdf8")
+            ax.set_xlabel("Similaridade (%)")
+            ax.set_ylabel("Termos")
+            ax.set_title("Ranking de proximidade semântica")
+            st.pyplot(fig)
 
     # =========================
     # Exportar Relatório (HTML/TXT)
@@ -481,23 +428,25 @@ def main():
             traduzir = st.button("Traduzir laudo para linguagem simples ✍️")
 
         if analisar and text_input.strip():
-            texto_limpo = re.sub(r"[.,;:!?()]", " ", text_input.lower())
-            matched = [(t, s) for t, s in zip(df["termo"], df["simplificado"]) if t.lower() in texto_limpo]
-            if matched:
-                for termo, explic in matched:
-                    st.markdown(f"<div class='card'><b>{termo}</b> → {explic}</div>", unsafe_allow_html=True)
-            else:
-                st.info("Nenhum termo técnico reconhecido neste trecho.")
+            res = requests.get(f"{API_URL}/analisar_termos_dificeis", params={"text_input": text_input})
+            if res.status_code == 200:
+                matched = res.json()["matched"]
+                if matched:
+                    for termo, explic in matched:
+                        st.markdown(f"<div class='card'><b>{termo}</b> → {explic}</div>", unsafe_allow_html=True)
+                else:
+                    st.info("Nenhum termo técnico reconhecido neste trecho.")
 
         if traduzir and text_input.strip():
             texto_out = text_input
             # substitui termos por versão simples (não sensível a maiúsc/minúsc)
-            for termo, explic in zip(df["termo"], df["simplificado"]):
-                texto_out = texto_out.replace(termo, f"{explic} ({termo})")
-                # versão lower-case simples
-                texto_out = texto_out.replace(termo.lower(), f"{explic} ({termo})")
-            st.markdown("#### 📝 Laudo em linguagem simples")
-            st.success(texto_out)
+            res = requests.get(f"{API_URL}/substituir_termos", params={"texto": text_input})
+            if res.status_code == 200:
+                texto_out = res.json()["texto_out"]
+                st.markdown("#### 📝 Laudo em linguagem simples")
+                st.success(texto_out)
+            else:
+                st.error("Erro ao substituir termos complexos")
     
     # =========================
     # Leitura em Voz Alta: Acessibilidade
@@ -529,7 +478,9 @@ def main():
         st.markdown("### 🧭 Mapa Semântico (t-SNE)")
 
         with st.spinner("Gerando mapa…"):
-            df_plot = mapa_semantico_interativo(df)
+            res = requests.get(f"{API_URL}/mapa_interativo")
+            df_plot = res.json()
+            df_plot = pd.DataFrame(df_plot)
 
         fig = px.scatter(
             df_plot,
