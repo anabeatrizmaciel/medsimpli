@@ -272,7 +272,11 @@ def main():
     dark_mode = st.sidebar.toggle("🌓 Modo escuro", value=False)
     inject_base_css(dark=dark_mode)
 
-    uploaded = st.sidebar.file_uploader("Carregar CSV personalizado (termo, tecnico, simplificado, fonte)", type=["csv"])
+    usuario_id = st.sidebar.selectbox(
+        "Usuário (ID):",
+        list(range(1, 11)),  # 1 a 10
+        index=0
+    )
     top_k = st.sidebar.slider("Quantidade de resultados", 1, 10, 3)
     show_explain = st.sidebar.toggle("Mostrar termos que mais pesaram", True)
     detect_terms = st.sidebar.toggle("🧠 Detectar palavras difíceis", True)
@@ -302,6 +306,10 @@ def main():
         st.session_state.history = []
     if "last_results" not in st.session_state:
         st.session_state.last_results = []  # [(rank, termo, simplif, score%), chips_str]
+    
+    # -- Inicializando variável de controle de busca ---
+    if "buscar_resultado" not in st.session_state:
+        st.session_state.buscar_resultado = False
 
     # --- Entrada principal ---
     st.markdown("### 🔍 Pesquise um termo médico")
@@ -317,6 +325,9 @@ def main():
     # Busca principal
     # =========================
     if buscar:
+        st.session_state.buscar_resultado = True
+
+    if st.session_state.buscar_resultado:
         if not query.strip():
             st.warning("Digite um termo ou texto para buscar.")
         else:
@@ -329,50 +340,101 @@ def main():
             chips_global = ""
 
             st.markdown("## 💬 Explicações encontradas")
-            res = requests.get(f"{API_URL}/recomendar_simplificacoes", params={"query": query, "top_k": top_k, "boost_strength": boost_strength})
+
+            res = requests.get(
+                f"{API_URL}/recomendar_simplificacoes",
+                params={
+                    "query": query,
+                    "top_k": top_k,
+                    "boost_strength": boost_strength
+                }
+            )
+
             if res.status_code == 200:
-                recomendacoes = res.json()
-                for rec in recomendacoes:
-                    st.markdown(f"""
-                    <div class="card">
-                        <h4>{rec["rank"]}. {rec["termo"]}</h4>
-                        <p><b>Similaridade:</b> {rec["score"]}%</p>
-                        <p><b>🩺 Tradução sugerida:</b></p>
-                        <div class="stSuccess">{rec["simplificado"]}</div>
-                    </div>
-                    """, unsafe_allow_html=True)
-
-                    res = requests.get(f"{API_URL}/termos_semelhantes", params={"index": rec["index"]})
-                    if res.status_code == 200:
-                        similares = res.json()["similares"]
-                        if similares:
-                            st.caption("🔗 Termos relacionados: " + " • ".join(similares))
-                    else:
-                        st.error("Erro ao buscar termos semelhantes")
-                    
-                    res = requests.get(f"{API_URL}/explicabilidade", params={"query": query, "index": rec["index"]})
-                    if res.status_code == 200:
-                        chips = res.json()["chips"]
-                        st.caption(f"Contribuições de termos: {chips}")
-                    else:
-                        st.error("Erro ao gerar explicação das recomendações")
-
-                    st.session_state.last_results.append((rec["rank"], rec["termo"], rec["simplificado"], rec["score"]))
+                st.session_state.recomendacoes = res.json()
             else:
                 st.error("Erro ao gerar recomendações")
+
+            # Agora renderiza SEM depender mais do 'buscar'
+            recomendacoes = st.session_state.recomendacoes
+
+            for rec in recomendacoes:
+                st.markdown(f"""
+                <div class="card">
+                    <h4>{rec["rank"]}. {rec["termo"]}</h4>
+                    <p><b>Similaridade:</b> {rec["score"]}%</p>
+                    <p><b>🩺 Tradução sugerida:</b></p>
+                    <div class="stSuccess">{rec["simplificado"]}</div>
+                </div>
+                """, unsafe_allow_html=True)
+
+                col_u, col_nu = st.columns(2)
+
+                # -----------------------------
+                # BOTÃO ÚTIL
+                # -----------------------------
+                with col_u:
+                    if st.button("👍 Útil", key=f"useful_{usuario_id}_{rec['index']}"):
+                        requests.post(
+                            f"{API_URL}/feedback",
+                            json={
+                                "user_id": usuario_id,
+                                "index": rec["index"],
+                                "termo": rec["termo"],
+                                "simplificado": rec["simplificado"],
+                                "useful": True
+                            }
+                        )
+                        st.success("Obrigado pelo feedback!")
+
+                # -----------------------------
+                # BOTÃO NÃO ÚTIL
+                # -----------------------------
+                with col_nu:
+                    if st.button("👎 Não útil", key=f"notuseful_{usuario_id}_{rec['index']}"):
+                        requests.post(
+                            f"{API_URL}/feedback",
+                            json={
+                                "user_id": usuario_id,
+                                "index": rec["index"],
+                                "termo": rec["termo"],
+                                "simplificado": rec["simplificado"],
+                                "useful": False
+                            }
+                        )
+                        st.warning("Feedback registrado!")
+
+                # Termos semelhantes
+                res = requests.get(f"{API_URL}/termos_semelhantes", params={"index": rec["index"]})
+                if res.status_code == 200:
+                    similares = res.json()["similares"]
+                    if similares:
+                        st.caption("🔗 Termos relacionados: " + " • ".join(similares))
+
+                # Explicabilidade
+                res = requests.get(f"{API_URL}/explicabilidade", params={"query": query, "index": rec["index"]})
+                if res.status_code == 200:
+                    chips = res.json()["chips"]
+                    st.caption(f"Contribuições de termos: {chips}")
+
+                st.session_state.last_results.append(
+                    (rec["rank"], rec["termo"], rec["simplificado"], rec["score"])
+                )
 
             # --- Mapa de similaridade ---
             st.subheader("📊 Mapa de Similaridade")
             for rec in recomendacoes[::-1]:
                 termos_plot.append(rec["termo"])
                 scores_plot.append(rec["score"])
-        
+
             fig, ax = plt.subplots()
-            ax.barh(termos_plot[::], scores_plot[::], color="#60a5fa" if not dark_mode else "#38bdf8")
+            ax.barh(termos_plot[::], scores_plot[::],
+                    color="#60a5fa" if not dark_mode else "#38bdf8")
             ax.set_xlabel("Similaridade (%)")
             ax.set_ylabel("Termos")
             ax.set_title("Ranking de proximidade semântica")
             st.pyplot(fig)
+
 
     # =========================
     # Exportar Relatório (HTML/TXT)

@@ -7,6 +7,9 @@ import io
 import base64
 import re
 import os
+from pydantic import BaseModel
+from collections import defaultdict
+import csv
 
 # Scikit-learn libraries
 from sklearn.manifold import TSNE
@@ -21,6 +24,19 @@ from fastapi import FastAPI, HTTPException
 
 
 app = FastAPI()
+
+# --- Classe que recebe o feedback do usuário
+class Feedback(BaseModel):
+    user_id: int
+    index: int
+    termo: str
+    simplificado: str
+    useful: bool
+
+feedback_count = defaultdict(lambda: {"pos": 0, "neg": 0})
+
+# --- armazenar feedbacks em memória
+feedback_storage = []
 
 # ---- Funções auxiliares ----
 def load_dataset():
@@ -135,6 +151,33 @@ def recomendar(query, top_k: int, boost_strength: float):
     sims_simplif = cosine_similarity(query_vec_simplif, tfidf_simplif)[0]
     sims = 0.5 * sims_tecnico + 0.5 * sims_simplif
 
+    # MODO HÍBRIDO
+    for i in range(len(df)):
+        pos = feedback_count[i]["pos"]
+        neg = feedback_count[i]["neg"]
+        total = pos + neg
+
+        if total == 0:
+            continue  # ninguém avaliou ainda
+
+        ratio = pos / total  # valor entre 0 e 1
+
+        # muito bem avaliado
+        if ratio >= 0.75 and total >= 3:
+            sims[i] += 0.20    # aumenta similaridade
+
+        # muito mal avaliado
+        elif ratio <= 0.25 and total >= 3:
+            sims[i] -= 0.20    # penaliza similaridade
+
+        # levemente positivo
+        elif ratio >= 0.60:
+            sims[i] += 0.10
+
+        # levemente negativo
+        elif ratio <= 0.40:
+            sims[i] -= 0.10
+
     # --- Boost semântico ---
     for i, termo in enumerate(df["termo"]):
         termo_lower = termo.lower()
@@ -204,3 +247,22 @@ def substituir_termos(texto):
         texto = texto.replace(termo.lower(), f"{explic} ({termo})")
 
     return {"texto_out": texto}
+
+@app.post("/feedback")
+def save_feedback(fb: Feedback):
+
+    # salva no CSV
+    file_exists = os.path.isfile("feedback.csv")
+    with open("feedback.csv", "a", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        if not file_exists:
+            writer.writerow(["user_id", "index", "termo", "simplificado", "useful"])
+        writer.writerow([fb.user_id, fb.index, fb.termo, fb.simplificado, fb.useful])
+
+    # registra para modo híbrido
+    if fb.useful:
+        feedback_count[fb.index]["pos"] += 1
+    else:
+        feedback_count[fb.index]["neg"] += 1
+
+    return {"message": "Feedback recebido!"}
