@@ -33,12 +33,16 @@ class Feedback(BaseModel):
 
 feedback_count = defaultdict(lambda: {"pos": 0, "neg": 0})
 
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+BACKEND_DIR = os.path.dirname(os.path.abspath(__file__))
+
 # --- armazenar feedbacks em memória
 feedback_storage = []
 
 # ---- Funções auxiliares ----
 def load_dataset():
-    df = pd.read_csv("../dados_saude_com_bulas.csv")
+    csv_path = os.path.join(ROOT_DIR, "dados_saude_com_bulas.csv")
+    df = pd.read_csv(csv_path)
 
     expected_cols = {"termo", "tecnico", "simplificado"}
     if not expected_cols.issubset(df.columns):
@@ -126,18 +130,6 @@ def load_data():
     df = load_dataset()
     
     return df.to_dict(orient="records")
-
-@app.get("/get_debug_accuracy")
-def debug_accuracy():
-    acertos = 0
-    for termo, esperado in zip(df['termo'], df['simplificado']):
-        query_vec = vectorizer_tecnico.transform([termo])
-        sims = cosine_similarity(query_vec, tfidf_tecnico)[0]
-        pred = df.iloc[np.argmax(sims)]['simplificado']
-        acertos += (pred == esperado)
-    acuracia = acertos / len(df)
-
-    return {"acc": acuracia}
 
 @app.get("/recomendar_simplificacoes")
 def recomendar(query, top_k: int, boost_strength: float):
@@ -255,9 +247,7 @@ def calcular_metricas():
     
     try:
         # gabarito (avaliacoes.csv)
-        avaliacoes_path = "../avaliacoes.csv"
-        if not os.path.isfile(avaliacoes_path):
-            avaliacoes_path = "avaliacoes.csv"
+        avaliacoes_path = os.path.join(ROOT_DIR, "avaliacoes.csv")
         
         df_avaliacoes = pd.read_csv(avaliacoes_path)
         
@@ -388,7 +378,8 @@ def calcular_metricas():
 def save_feedback(fb: Feedback):
 
     # salva no CSV
-    file_exists = os.path.isfile("feedback.csv")
+    feedback_path = os.path.join(BACKEND_DIR, "feedback.csv")
+    file_exists = os.path.isfile(feedback_path)
     with open("feedback.csv", "a", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
         if not file_exists:

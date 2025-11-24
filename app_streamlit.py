@@ -295,15 +295,6 @@ def main():
     st.markdown(f"<h1>🩺 {APP_TITLE}</h1>", unsafe_allow_html=True)
     st.markdown(f"<h4>{APP_TAGLINE}</h4>", unsafe_allow_html=True)
 
-    # # --- 🔍 Avaliação de acurácia (modo debug) ---
-    res = requests.get(f"{API_URL}/get_debug_accuracy")
-
-    if res.status_code == 200:
-        acc = res.json()["acc"]
-        st.sidebar.info(f"Acurácia aproximada: {acc:.2%}")
-    else:
-        st.error("Erro ao calcular acurácia")
-
     # --- Sessão / Histórico ---
     if "history" not in st.session_state:
         st.session_state.history = []
