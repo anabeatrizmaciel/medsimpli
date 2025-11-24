@@ -285,6 +285,9 @@ def main():
     st.sidebar.markdown("### 🗺️ Mapa Semântico")
     ativar_mapa = st.sidebar.toggle("Exibir mapa (t-SNE)", False)
 
+    st.sidebar.markdown("### 📊 Métricas de Avaliação")
+    exibir_metricas = st.sidebar.toggle("Exibir métricas (Precision/Recall/F1)", False)
+
     st.sidebar.markdown("---")
     st.sidebar.caption("💡 Se nenhum CSV for enviado, o dataset padrão será usado.")
 
@@ -564,17 +567,125 @@ def main():
 
         st.plotly_chart(fig, use_container_width=True)
 
+    # Métricas de Avaliação 
+    if exibir_metricas:
+        st.markdown("### 📊 Métricas de Avaliação do Sistema")
+        st.caption("Comparação das recomendações com o gabarito (avaliacoes.csv). Relevante = nota >= 4")
+        
+        # Botão
+        if st.button("🔄 Calcular Métricas", key="btn_calcular_metricas"):
+            with st.spinner("Calculando métricas"):
+                try:
+                    res = requests.get(f"{API_URL}/metricas")
+                    
+                    if res.status_code == 200:
+                        dados = res.json()
+                        media = dados["media"]
+                        por_usuario = dados["por_usuario"]
+                        
+                        st.markdown("#### 📈 Resumo Geral (Média do Sistema)")
+                        col_prec, col_rec, col_f1 = st.columns(3)
+                        
+                        with col_prec:
+                            st.metric("Precision", f"{media['precision']:.2%}")
+                        
+                        with col_rec:
+                            st.metric("Recall", f"{media['recall']:.2%}")
+                        
+                        with col_f1:
+                            st.metric("F1-Score", f"{media['f1']:.2%}")
+                        
+                        st.caption(f"Baseado em {media['num_usuarios']} usuários")
+                        
+                        # Tabela resumida por usuário
+                        st.markdown("#### 📋 Resumo por Usuário")
+                        
+                        # Cria DataFrame
+                        df_metricas = pd.DataFrame(por_usuario)
+                        df_metricas["Precision"] = df_metricas["precision"].apply(lambda x: f"{x:.2%}")
+                        df_metricas["Recall"] = df_metricas["recall"].apply(lambda x: f"{x:.2%}")
+                        df_metricas["F1-Score"] = df_metricas["f1"].apply(lambda x: f"{x:.2%}")
+                        
+                        # Seleciona colunas para exibição
+                        df_display = df_metricas[["usuario_id", "Precision", "Recall", "F1-Score", "tp", "fp", "fn"]]
+                        df_display.columns = ["Usuário", "Precision", "Recall", "F1-Score", "TP", "FP", "FN"]
+                        
+                        st.dataframe(df_display, use_container_width=True, hide_index=True)
+                        
+                        # Detalhamento visual por usuário
+                        st.markdown("#### 🔍 Detalhamento: O que foi recomendado vs O que era relevante")
+                        st.caption("Clique em cada usuário para ver os itens recomendados e relevantes")
+                        
+                        for usuario_data in por_usuario:
+                            usuario_id = usuario_data["usuario_id"]
+                            
+                            with st.expander(f"👤 Usuário {usuario_id} | Precision: {usuario_data['precision']:.2%} | Recall: {usuario_data['recall']:.2%} | F1: {usuario_data['f1']:.2%}"):
+                                col1, col2 = st.columns(2)
+                                
+                                with col1:
+                                    st.markdown("**✅ O que o sistema RECOMENDOU:**")
+                                    recomendados = usuario_data.get("itens_recomendados", [])
+                                    if recomendados:
+                                        for item in recomendados:
+                                            # Verifica se é TP ou FP
+                                            if item in usuario_data.get("itens_tp", []):
+                                                st.success(f"✓ {item} (acerto - era relevante)")
+                                            elif item in usuario_data.get("itens_fp", []):
+                                                st.warning(f"✗ {item} (erro - não era relevante)")
+                                            else:
+                                                st.write(f"• {item}")
+                                    else:
+                                        st.info("Nenhum item recomendado")
+                                
+                                with col2:
+                                    st.markdown("**⭐ O que o usuário achou RELEVANTE (nota >= 4):**")
+                                    relevantes = usuario_data.get("itens_relevantes", [])
+                                    if relevantes:
+                                        for item in relevantes:
+                                            # Verifica se foi recomendado ou não
+                                            if item in usuario_data.get("itens_tp", []):
+                                                st.success(f"✓ {item} (foi recomendado - acerto)")
+                                            elif item in usuario_data.get("itens_fn", []):
+                                                st.error(f"✗ {item} (NÃO foi recomendado - erro)")
+                                            else:
+                                                st.write(f"• {item}")
+                                    else:
+                                        st.info("Nenhum item relevante")
+                                
+                                # Resumo visual
+                                st.markdown("---")
+                                st.markdown("**📊 Resumo:**")
+                                
+                                col_tp, col_fp, col_fn = st.columns(3)
+                                
+                                with col_tp:
+                                    st.metric("✅ Acertos (TP)", usuario_data["tp"])
+                                    if usuario_data.get("itens_tp"):
+                                        st.caption(", ".join(usuario_data["itens_tp"]))
+                                
+                                with col_fp:
+                                    st.metric("⚠️ Falsos Positivos (FP)", usuario_data["fp"])
+                                    if usuario_data.get("itens_fp"):
+                                        st.caption(", ".join(usuario_data["itens_fp"]))
+                                
+                                with col_fn:
+                                    st.metric("❌ Falsos Negativos (FN)", usuario_data["fn"])
+                                    if usuario_data.get("itens_fn"):
+                                        st.caption(", ".join(usuario_data["itens_fn"]))
+                    
+                    else:
+                        st.error(f"Erro ao calcular métricas: {res.status_code}")
+                        st.caption("Certifique-se de que o backend está rodando e o arquivo avaliacoes.csv existe.")
+                
+                except requests.exceptions.ConnectionError:
+                    st.error("Não foi possível conectar ao backend. Certifique-se de que o servidor está rodando em http://127.0.0.1:8000")
+                except Exception as e:
+                    st.error(f"Erro ao calcular métricas: {str(e)}")
 
-
-    # --- Rodapé ---
     st.markdown(
         "<div class='footer'>🧠 MedSimpli+ — IA aplicada à compreensão médica. Protótipo acadêmico sem fins diagnósticos.</div>",
         unsafe_allow_html=True
     )
 
-
-# =========================
-# Execução
-# =========================
 if __name__ == "__main__":
     main()

@@ -1,4 +1,3 @@
-# Geberal purpose library
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -25,7 +24,6 @@ from fastapi import FastAPI, HTTPException
 
 app = FastAPI()
 
-# --- Classe que recebe o feedback do usuário
 class Feedback(BaseModel):
     user_id: int
     index: int
@@ -83,7 +81,6 @@ def mapa_semantico_interativo(df):
     )
     X = vectorizer.fit_transform(termos).toarray()
 
-    # Redução de dimensionalidade - SOMENTE TSNE
     reducer = TSNE(
         n_components=2,
         perplexity=10,
@@ -247,6 +244,145 @@ def substituir_termos(texto):
         texto = texto.replace(termo.lower(), f"{explic} ({termo})")
 
     return {"texto_out": texto}
+
+@app.get("/metricas")
+def calcular_metricas():
+    # Calcula as 03 metricas para cada usuário
+
+    # Parâmetros fixos
+    top_k = 3
+    boost_strength = 0.4
+    
+    try:
+        # gabarito (avaliacoes.csv)
+        avaliacoes_path = "../avaliacoes.csv"
+        if not os.path.isfile(avaliacoes_path):
+            avaliacoes_path = "avaliacoes.csv"
+        
+        df_avaliacoes = pd.read_csv(avaliacoes_path)
+        
+        def normalizar_termo(termo):
+            return str(termo).lower().strip()
+        
+        def mapear_termo_para_item_id(termo_recomendado, todos_item_ids):
+            # Mapeia um termo do dataset para o item_id correspondente no avaliacoes.csv
+            termo_norm = normalizar_termo(termo_recomendado)
+            primeira_palavra = termo_norm.split()[0] if termo_norm else termo_norm
+            
+            for item_id in todos_item_ids:
+                item_norm = normalizar_termo(item_id)
+                if item_norm == termo_norm or item_norm == primeira_palavra:
+                    return item_norm
+                if primeira_palavra == item_norm:
+                    return item_norm
+            return None
+        
+        def conjuntos_usuario(avaliacoes, usuario_id):
+            #"Retorna: (relevantes, todos_itens) para um usuário
+            df_u = avaliacoes[avaliacoes["usuario_id"] == usuario_id].copy()
+            # Marca itens relevantes (nota >= 4)
+            df_u["relevante"] = df_u["nota"] >= 4
+            # Normaliza os item_ids
+            df_u["item_id_norm"] = df_u["item_id"].apply(normalizar_termo)
+            relevantes = set(df_u[df_u["relevante"] == True]["item_id_norm"])
+            todos_itens = set(df_u["item_id_norm"])
+            return relevantes, todos_itens
+        
+        # Lista para armazenar métricas de cada usuário
+        lista_metricas_usuarios = []
+        
+        for usuario_id in sorted(df_avaliacoes["usuario_id"].unique()):
+            # Obter conjuntos do usuário (relevantes e todos os itens)
+            relevantes, todos_itens = conjuntos_usuario(df_avaliacoes, usuario_id)
+            
+            if len(relevantes) == 0:
+                # Se não tiver  itens relevantes, pula  usuário
+                continue
+            
+            # Gerar recomendações para este usuário
+            recomendados_set = set()
+            avaliacoes_usuario = df_avaliacoes[df_avaliacoes["usuario_id"] == usuario_id]
+            queries_usadas = set()
+            
+            for _, row in avaliacoes_usuario.iterrows():
+                item_id = str(row["item_id"])
+                query = item_id
+                
+                if query in queries_usadas:
+                    continue
+                queries_usadas.add(query)
+                
+                recs = recomendar(query, top_k, boost_strength)
+                
+                # Adiciona os termos recomendados ao conjunto
+                for rec in recs:
+                    termo_recomendado = rec["termo"]
+                    item_id_mapeado = mapear_termo_para_item_id(termo_recomendado, todos_itens)
+                    if item_id_mapeado:
+                        recomendados_set.add(item_id_mapeado)
+            
+            # Identifica TP, FP, FN como conjuntos de itens
+            itens_tp = list(recomendados_set & relevantes)  # relevantes que o sistema recomendou
+            itens_fp = list(recomendados_set - relevantes)   # não relevantes que o sistema recomendou
+            itens_fn = list(relevantes - recomendados_set)   # relevantes que o sistema NÃO recomendou
+            
+            tp = len(itens_tp)
+            fp = len(itens_fp)
+            fn = len(itens_fn)
+            
+            # Calcular métricas
+            if len(recomendados_set) == 0:
+                precision = 0.0
+            else:
+                precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+            
+            recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+            
+            if precision + recall == 0:
+                f1 = 0.0
+            else:
+                f1 = 2 * (precision * recall) / (precision + recall)
+            
+            # Adiciona métricas do usuário à lista (incluindo listas de itens)
+            lista_metricas_usuarios.append({
+                "usuario_id": int(usuario_id),
+                "precision": round(precision, 4),
+                "recall": round(recall, 4),
+                "f1": round(f1, 4),
+                "tp": int(tp),
+                "fp": int(fp),
+                "fn": int(fn),
+                "itens_relevantes": sorted(list(relevantes)),  # itens que o usuário achou relevantes (nota >= 4)
+                "itens_recomendados": sorted(list(recomendados_set)),  # itens que o sistema recomendou
+                "itens_tp": sorted(itens_tp),  # acertos: relevantes E recomendados
+                "itens_fp": sorted(itens_fp),  # falsos positivos: recomendados mas não relevantes
+                "itens_fn": sorted(itens_fn)   # falsos negativos: relevantes mas não recomendados
+            })
+        
+        # Calculo da média geral
+        if len(lista_metricas_usuarios) > 0:
+            df_metricas = pd.DataFrame(lista_metricas_usuarios)
+            media = {
+                "precision": round(df_metricas["precision"].mean(), 4),
+                "recall": round(df_metricas["recall"].mean(), 4),
+                "f1": round(df_metricas["f1"].mean(), 4),
+                "num_usuarios": len(lista_metricas_usuarios)
+            }
+        else:
+            media = {
+                "precision": 0.0,
+                "recall": 0.0,
+                "f1": 0.0,
+                "num_usuarios": 0
+            }
+        
+        return {
+            "por_usuario": lista_metricas_usuarios,
+            "media": media
+        }
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao calcular métricas: {str(e)}")
 
 @app.post("/feedback")
 def save_feedback(fb: Feedback):
