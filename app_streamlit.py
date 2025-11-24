@@ -27,7 +27,7 @@ APP_TAGLINE = "Saúde em linguagem simples - IA aplicada à interpretação méd
 # =========================
 # API
 # =========================
-API_URL = "http://127.0.0.1:8000"
+API_URL = "https://medsimpli.onrender.com"
 
 # =========================
 # CSS
