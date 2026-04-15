@@ -1,0 +1,134 @@
+Título: Sarampo
+
+O
+sarampo
+é uma doença infecciosa altamente contagiosa que já foi uma das principais causas de mortalidade infantil em todo o mundo. Apesar dos avanços significativos no controle e prevenção por meio da vacinação, o sarampo ainda representa um desafio para a saúde pública, especialmente em regiões com baixas taxas de imunização. Caracterizado por sintomas que podem ser confundidos com os de outras doenças virais, o sarampo exige atenção e conhecimento para ser identificado e tratado adequadamente.
+Transmissão e prevenção
+A transmissão do vírus do sarampo ocorre de pessoa a pessoa, por via aérea, ao tossir, espirrar, falar ou respirar. O sarampo é tão contagioso que uma pessoa infectada pode transmitir para 90% das pessoas próximas que não estejam imunes.
+A transmissão pode ocorrer entre 6 dias antes e 4 dias após o aparecimento das manchas vermelhas pelo corpo.
+O sarampo é uma doença prevenível por vacinação.
+Os critérios de indicação da vacina são revisados periodicamente pelo Ministério da Saúde e levam em conta: características clínicas da doença, idade, ter adoecido por sarampo durante a vida, ocorrência de surtos, além de outros aspectos epidemiológicos. A prevenção do sarampo está disponível em apresentações diferentes. Todas previnem o sarampo e cabe ao profissional de saúde aplicar a vacina adequada para cada pessoa, de acordo com a idade ou situação epidemiológica.
+Tipos de vacinas
+Dupla viral
+Protege do vírus do sarampo e da rubéola. Pode ser utilizada para o bloqueio vacinal em situação de surto.
+Tríplice viral
+Protege do vírus do sarampo, caxumba e rubéola.
+Tetra viral
+Protege do vírus do sarampo, caxumba, rubéola e varicela (catapora).
+Vacinação
+Na rotina dos serviços de saúde, todas as pessoas de 12 meses a 59 anos de idade têm indicação para serem vacinadas contra o sarampo. Adolescentes e adultos não vacinados ou com esquema incompleto contra o sarampo devem iniciar ou completar o esquema vacinal de acordo com a situação encontrada, respeitando as indicações do
+Calendário Nacional de Vacinação
+. Na rotina dos serviços públicos de vacinação, há duas vacinas disponíveis para proteção contra o sarampo: vacina tríplice viral (sarampo,
+caxumba
+e
+rubéola
+) e a tetraviral (sarampo, caxumba, rubéola e varicela).
+A vacina tríplice viral
+é contraindicada durante a gestação
+. As gestantes não vacinadas ou com esquema incompleto deverão receber a vacina no puerpério.
+A depender da situação epidemiológica de cada localidade, há a necessidade de estabelecer outras estratégias. Assim, além das doses de rotina estabelecidas no Calendário Nacional de Vacinação
+,
+a vacinação para o sarampo pode ser indicada para crianças de seis meses a menores de um ano
+, em localidades com o surto da doença, a depender da avaliação e indicação conjunta das três esferas de gestão.
+Outras medidas de controle
+Distribuição de Vacina
+Vacinação
+Sintomas
+Os principais sinais e sintomas do sarampo são:
+Manchas vermelhas (exantema)
+no corpo e
+febre alta
+(acima de 38,5°)
+acompanhada de um ou mais
+dos seguintes sintomas:
+Tosse seca
+Irritação nos olhos (conjuntivite)
+Nariz escorrendo ou entupido
+Mal-estar intenso
+Em torno de
+3 a 5 dias
+é comum aparecer
+manchas vermelhas no rosto e atrás das orelhas
+que, em seguida, se espalham pelo restante do corpo. Após o aparecimento das manchas, a persistência da febre é um sinal de alerta e pode indicar gravidade, principalmente em
+crianças menores de 5 anos de idade
+.
+Caso você apresente estes sinais e sintomas, procure um serviço de saúde.
+Eventos Supostamente Atribuíveis à Vacinação ou Imunização (ESAVI)
+As vacinas tríplices viral e tetraviral, em geral, causam pouca reação. Os eventos adversos mais observados
+são
+febre,
+dor
+e
+rubor no local da administração e exantema.
+As reações de
+hipersensibilidade são raras.
+Saiba Mais
+Complicações
+O sarampo é uma doença grave que pode deixar sequelas por toda a vida ou até mesmo causar a morte. A vacina é a maneira mais efetiva de evitar que isso aconteça.
+Algumas das complicações do sarampo são:
+Pneumonia
+(infecção no pulmão)
+Cerca de 1 em cada 20 crianças com sarampo pode desenvolver pneumonia, causa mais comum de morte por sarampo em crianças pequenas;
+Otite média aguda
+(infecção no ouvido)
+Ocorre em cerca de 1 em 10 crianças com sarampo e pode resultar em perda auditiva permanente;
+Encefalite aguda
+(inflamação no cérebro)
+1 a 4 em cada 1.000 crianças podem desenvolver essa complicação e 10% destas podem morrer;
+Morte
+1 a 3 a cada 1.000 crianças doentes podem morrer em decorrência de complicações da doença.
+Diagnóstico
+O diagnóstico pode ser clínico (pessoas que apresentam os sinais e sintomas da doença), no entanto, o ideal é que seja laboratorial, por sorologia (amostra de sangue), e também por biologia molecular (amostras de secreção de orofaringe, nasofaringe, urina).
+Para o sarampo, o diagnóstico laboratorial é padrão-ouro.
+É realizado por meio de sorologia para detecção de anticorpos IgM específicos e soroconversão, ou aumento de títulos de anticorpos IgG em amostras de sangue (soro), e a detecção viral por meio de RT-PCR, com a coleta de amostras de secreção nasofaríngea, orofaríngea e urina. É imprescindível que a coleta de amostras para realização de sorologias e RT-PCR de casos suspeitos, seja realizada no primeiro contato com o paciente.
+Prazos da coleta de espécimes clínicos:
+Primeira amostra de sangue (S1):
+Deve ser coletada entre o 1º e o 30º dia do aparecimento do exantema.
+Segunda amostra de sangue (S2):
+Deve ser coletada de 15 a 25 dias após a coleta da S1.
+As amostras de secreção nasofaríngea, orofaríngea e urina para detecção viral devem ser coletadas até o 7º dia,
+a partir da data do início do exantema.
+O diagnóstico também pode ser clínico, mas a confirmação do caso por este critério não é recomendada na rotina. Contudo, em situações de surto, esse critério poderá ser utilizado.
+Os critérios para confirmação ou descarte de casos, e outras informações podem ser encontradas no
+Guia de Vigilância em Saúde.
+Tratamento
+Não existe tratamento específico para o sarampo.
+Os medicamentos são utilizados para reduzir o desconforto ocasionado pelos sintomas da doença. Não faça uso de nenhum medicamento sem orientação médica e procure o serviço de saúde mais próximo, caso apresente os sintomas descritos acima.
+Não existe tratamento específico para a infecção por sarampo.
+O uso de antibiótico é contraindicado, exceto se houver indicação médica pela ocorrência de infecções secundárias.
+Para os casos sem complicação, devem-se manter a hidratação e o suporte nutricional, e diminuir a hipertermia. Muitas crianças necessitam de quatro a oito semanas para recuperar o estado nutricional.
+Recomenda-se a administração do palmitato de retinol (vitamina A)
+, mediante avaliação clínica e/ou nutricional por um profissional de saúde, em todas as crianças com suspeita de sarampo, para redução da mortalidade e prevenção de complicações pela doença, nas dosagens indicadas.
+Indicação do uso de vitamina A (Palmitato de Retinol) para crianças consideradas casos suspeitos de sarampo, segundo faixa etária:
+Crianças menores de 6 meses de idade
+Dose:
+50.000 UI
+Administração:
+Duas doses via oral (uma no dia da suspeita e outra no dia seguinte)
+Crianças entre 6 e 11 meses e 29 dias de idade
+Dose:
+100.000 UI
+Administração:
+Duas doses via oral (uma no dia da suspeita e outra no dia seguinte)
+Crianças maiores de 12 meses de idade
+Dose:
+200.000 UI
+Administração:
+Duas doses via oral (uma no dia da suspeita e outra no dia seguinte)
+Mais informações
+Educação e Mobilização em Saúde
+Educação Permanente
+Notas Técnicas
+Notificação/Investigação
+Perguntas Frequentes (FAQ)
+Publicações
+Situação Epidemiológica
+Ouvidoria-Geral do
+SUS
+Teleatendente: de segunda-feira
+a sexta-feira, das 8h às 20h,
+e aos sábados, das 8h às 18h.
+Membro da Vaccine Safety Net (VSN)
+Organização Mundial da Saúde – OMS
+O logotipo da VSN é de propriedade da OMS e utilizado com autorização.
+©2025 - Ministério da Saúde | Todos os direitos reservados.
