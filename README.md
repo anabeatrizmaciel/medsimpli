@@ -1,143 +1,79 @@
 # 🩺 MedSimpli
 
-### *Saúde em linguagem simples - IA aplicada à interpretação de termos médicos*
+### *Saúde em linguagem simples — IA aplicada à compreensão de termos médicos em português brasileiro*
 
 ---
 
 ## 📌 Visão Geral
 
-O **MedSimpli** é um **sistema de recomendação com sistema híbrido de recomendação (filtragem baseada em conteúdo + feedback dos usuários)** desenvolvido para **simplificar termos técnicos encontrados em bulas, laudos e documentos médicos**, facilitando a compreensão por parte de pacientes, estudantes e profissionais não especialistas.
+O **MedSimpli** é um sistema de apoio à compreensão de linguagem médica em português brasileiro. A proposta é simples: o usuário faz uma pergunta sobre um termo, doença, sintoma ou orientação de saúde, e o sistema responde com uma explicação clara, acessível e baseada em fontes confiáveis.
 
-O projeto utiliza técnicas de **Processamento de Linguagem Natural (NLP)**, especialmente **TF-IDF** e **t-SNE**, para:
+O sistema utiliza a abordagem **RAG (Retrieval-Augmented Generation)**, que combina:
 
-- identificar termos complexos,
-- oferecer explicações simplificadas,
-- sugerir termos relacionados,
-- e visualizar agrupamentos semânticos.
+- **busca semântica** para recuperar os trechos mais relevantes da base documental;
+- **geração com LLM** para transformar esses trechos em uma resposta em linguagem simples;
+- **exibição da fonte** para que o usuário saiba de onde veio a informação.
 
-A **filtragem baseada em conteúdo** significa que o sistema recomenda itens com base nas características do **próprio conteúdo** (TF-IDF das descrições técnicas), e não com base no comportamento de outros usuários (como seria uma filtragem colaborativa).
-
-No MedSimpli, agora em versão **híbrida**:
-
-- cada termo técnico é transformado em um vetor TF-IDF;
-- consultas do usuário também viram vetores;
-- o sistema compara esses vetores usando cosine similarity;
-- **e combina essas pontuações com o histórico de feedback útil/não útil**, fortalecendo recomendações bem avaliadas e reduzindo recomendações rejeitadas.
-
-O MedSimpli foi desenvolvido como um protótipo acadêmico com foco em acessibilidade e educação em saúde.
+O MedSimpli foi desenvolvido como protótipo acadêmico com foco em acessibilidade, letramento em saúde e contextualização cultural para o público brasileiro.
 
 ---
 
 ## 🎯 Objetivo
 
-> **Transformar informações médicas complexas em linguagem acessível**, sem perder precisão ou contexto.
+> **Transformar informações médicas complexas em linguagem acessível**, sem perder o significado original da informação.
 
-O sistema busca reduzir barreiras cognitivas, aumentar a autonomia do paciente e apoiar atividades educacionais na área de saúde.
-
----
-
-## ⭐ Funcionalidades Principais
-
-### 🔍 1. **Busca de termos técnicos**
-
-- Identificação de termos médicos digitados pelo usuário.
-- Retorno de explicações simplificadas com base no dataset.
-- Cálculo de **similaridade semântica** com TF-IDF.
+O sistema busca reduzir barreiras cognitivas, aumentar a autonomia do paciente e apoiar atividades educacionais na área de saúde, com atenção especial ao contexto, regionalismos e ao modo como o brasileiro realmente fala sobre saúde.
 
 ---
 
-### 🧠 2. **Detecção automática em laudos**
+## ⭐ Funcionalidades
 
-- O usuário cola um trecho de laudo.
-- O sistema detecta automaticamente palavras difíceis.
-- Exibe explicações simplificadas para cada termo encontrado.
-
----
-
-### 📊 3. **Mapa Semântico Interativo (t-SNE + KMeans)**
-
-- Visualização 2D interativa com zoom/hover.
-- Agrupamento de termos por **proximidade semântica**.
-- Cores baseadas em clusters automáticos.
-- Hover exibe termo + explicação simples.
-- Compatível com modo escuro.
+- **Busca semântica** sobre base documental de saúde confiável
+- **Respostas geradas por LLM** em linguagem simples e objetiva
+- **Exibição das fontes** que sustentaram cada resposta
+- **Regras de segurança** — o sistema não fornece diagnóstico, não prescreve tratamento e sinaliza quando não tem informação suficiente
 
 ---
 
-### 🎧 4. **Leitura em voz alta (gTTS)**
-
-- Converte a explicação simplificada em áudio.
-- Melhora acessibilidade para pessoas com dificuldades de leitura.
-
----
-
-### 🌙 5. **Modo Escuro Completo**
-
-- CSS customizado para dark mode.
-- Inputs, selects, cards e gráficos adaptados.
-- Visual moderno e consistente.
-
----
-
-### 📤 6. **Exportação de Relatórios**
-
-- Exporta explicações encontradas em:
-  - **HTML**
-  - **TXT**
-
----
-
-### 🕓 7. **Histórico de buscas**
-
-- Lista de últimos termos pesquisados.
-- Botão para repetir a consulta.
-
----
-
-## 🧬 Arquitetura Técnica
-
-### 🟦 **NLP**
-
-- Representação vetorial com **TF-IDF (1-gram e 2-gram)**.
-- Similaridade calculada com **cosine similarity**.
-
-### 🟪 **Redução de dimensionalidade**
-
-- **t-SNE** para visualizar estrutura semântica.
-- Normalização com **StandardScaler**.
-
-### 🟥 **Clusterização**
-
-- **KMeans** para agrupamento automático de termos.
-- Usado no mapa semântico interativo.
-
-### 🟩 **Frontend**
-
-- Desenvolvido em **Streamlit**, incluindo:
-  - componentes customizados,
-  - dark mode,
-  - renderização responsiva,
-  - visualizações interativas com **Plotly** e **Matplotlib**.
-
----
-
-## 🗂️ Estrutura de Arquivos
-
-A estrutura atual do projeto (conforme organização híbrida real utilizada) está assim:
+## 🧠 Prompt Base
 
 ```
-MEDSIMPLI/
-├── backend/
-│   ├── feedback.csv
-│   ├── main.py
-│
-├── app_streamlit.py   # frontend Streamlit
-├── avaliacoes.csv     # avaliações manuais dos usuários
-├── dados_saude_com_bulas.csv
-│
-├── README.md
-├── render.yaml
-└── requirements.txt
+Você é um assistente do MedSimpli, um sistema de apoio à compreensão
+de linguagem médica em português brasileiro.
+
+O objetivo do MedSimpli é ajudar usuários a entender termos médicos,
+doenças, sintomas, exames e orientações de saúde por meio de
+explicações simples, claras e acessíveis, sempre com base em fontes
+confiáveis recuperadas pelo sistema.
+
+Contexto recuperado:
+"""
+{context}
+"""
+
+Pergunta do usuário: {query}
+
+Sua tarefa é responder à pergunta usando apenas o contexto fornecido.
+
+Siga estas regras:
+- use apenas as informações presentes no contexto recuperado;
+- não invente informações e não complemente com suposições;
+- se o contexto não contiver informação suficiente, responda exatamente:
+  "Não encontrei informações suficientes sobre esse tema na base do
+  MedSimpli. Consulte um profissional de saúde.";
+- escreva em português brasileiro claro e objetivo;
+- evite jargões desnecessários;
+- quando existir um termo popular equivalente ao termo técnico,
+  mencione-o entre parênteses;
+- quando útil, organize a resposta em tópicos curtos;
+- não forneça diagnóstico;
+- não prescreva tratamento;
+- não substitua a avaliação de um profissional de saúde.
+
+Formato esperado da resposta:
+1. explicação simples;
+2. pontos principais, se necessário;
+3. aviso de limitação, quando aplicável.
 ```
 
 ---
@@ -145,16 +81,7 @@ MEDSIMPLI/
 ## 🛠️ Tecnologias Utilizadas
 
 - **Python 3.10+**
-- **Streamlit**
-- **Pandas**
-- **scikit-learn**
-  - TF-IDF
-  - t-SNE
-  - KMeans
-- **Plotly**
-- **Matplotlib**
-- **gTTS**
-- **NumPy**
+- **Streamlit** — interface web
 
 ---
 
@@ -164,8 +91,8 @@ MEDSIMPLI/
 
 ```bash
 python -m venv venv
-source venv/bin/activate  # Linux/macOS
-venv\Scripts\activate     # Windows
+source venv/bin/activate   # Linux/macOS
+venv\Scripts\activate      # Windows
 ```
 
 ### 2) Instalar dependências
@@ -174,7 +101,14 @@ venv\Scripts\activate     # Windows
 pip install -r requirements.txt
 ```
 
-### 3) Executar o app
+### 3) Indexar a base documental
+
+```bash
+python scripts/ingest.py   # gera e valida os chunks
+python scripts/embed.py    # cria o banco vetorial (roda uma vez)
+```
+
+### 4) Executar o app
 
 ```bash
 python -m streamlit run app_streamlit.py
@@ -182,76 +116,13 @@ python -m streamlit run app_streamlit.py
 
 ---
 
-## 📚 Dataset
-
-O dataset contém três colunas obrigatórias e uma opcional:
-
-- **termo**: palavra técnica original
-- **tecnico**: definição ou frase técnica
-- **simplificado**:  explicação em linguagem acessível
-- **fonte**: de onde a explicação técnica foi tirada
-
----
-
-## 📈 Resultados das Métricas do Sistema (Versão Híbrida)
-
-### **📊 Resumo Geral (Baseado em 11 usuários)**
-
-- **Precision:** 85,45%
-- **Recall:** 100%
-- **F1-Score:** 89,03%
-
-### 🧩 **Interpretação das Métricas**
-
-#### **🎯 Precision: 85,45%**
-
-Indica que **a maioria das recomendações feitas pelo sistema realmente corresponde ao termo correto** ou à explicação apropriada. Ou seja:
-
-> Quando o MedSimpli recomenda algo, ele acerta na maior parte das vezes.
-
-Um valor acima de 80% demonstra **boa precisão**, com poucos falsos positivos.
-
----
-
-#### **🔍 Recall: 100%**
-
-O sistema conseguiu **recuperar todos os itens relevantes** durante a avaliação. Isso significa que:
-
-> Sempre que havia uma explicação relevante no dataset, o sistema foi capaz de encontrá-la.
-
-Um recall perfeito mostra que o modelo **não perde explicações importantes**.
-
----
-
-#### **⚖️ F1-Score: 89,03%**
-
-O F1 é o equilíbrio entre precision e recall. Um valor de \~89% mostra que:
-
-- o sistema mantém **alta precisão**,
-- sem abrir mão da **completude**,
-- apresentando **boa performance geral**.
-
-Esse valor é especialmente positivo para sistemas de recomendação em linguagem natural, onde equilíbrio é essencial.
-
----
-
-### 📌 **Conclusão dos Resultados**
-
-- O MedSimpli apresenta **excelente recall**, garantindo que o usuário sempre veja explicações relevantes.
-- A precision alta indica que o sistema é **confiável** e acerta a maior parte das recomendações.
-- O F1-Score reforça que o desempenho geral é **forte e consistente**.
-
-Esses indicadores mostram que o protótipo é eficaz para sua finalidade acadêmica e demonstra potencial para ser expandido para datasets maiores e feedback em tempo real.
-
----
-
 ## 📌 Aviso
 
-O MedSimpli é um protótipo acadêmico e **NÃO substitui avaliação médica profissional**.
+O MedSimpli é um protótipo acadêmico e **NÃO substitui avaliação médica profissional**. As informações fornecidas têm caráter educativo e são baseadas em fontes do Ministério da Saúde.
 
 ---
 
 ## 💙 Autoria
 
-Desenvolvido por **Ana Beatriz, Fernando Luiz, Luiz Daniel e Marcelo Heitor**
-Protótipo acadêmico para estudo de NLP aplicado à área de saúde.
+Desenvolvido por **Ana Beatriz Maciel Nunes e Marcelo Heitor de Almeida Lira**
+Protótipo acadêmico para estudo de NLP e RAG aplicados à área de saúde.
