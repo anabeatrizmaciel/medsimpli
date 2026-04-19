@@ -7,3 +7,11 @@ gTTS
 plotly
 fastapi
 uvicorn
+langchain
+langchain-core
+langchain-community
+langchain-huggingface
+langchain_text_splitters
+faiss-cpu
+transformers
+sentence-transformers
