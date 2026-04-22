@@ -2,6 +2,7 @@ from langchain_core.documents import Document
 from langchain_core.prompts import PromptTemplate
 from langchain_classic.chains import RetrievalQA
 from langchain_huggingface import HuggingFaceEmbeddings, HuggingFacePipeline
+from langchain_ollama import OllamaLLM
 from langchain_community.vectorstores import FAISS
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from transformers import pipeline
@@ -9,11 +10,9 @@ import os
 import json
 
 MODEL_NAME = "pucpr/biobertpt-all"
-INDEX_PATH = "faiss_vectorstore"
-TOP_K = 3
+TOP_K = 5
 
-MAP_PROMPT = PromptTemplate(
-    template="""
+PROMPT_TEMPLATE = """
 Você é um assistente do MedSimpli, um sistema de apoio à compreensão
 de linguagem médica em português brasileiro.
 
@@ -50,20 +49,11 @@ Formato esperado da resposta:
 3. aviso de limitação, quando aplicável.
 
 Resposta:
-""",
+"""
+
+PROMPT = PromptTemplate(
+    template=PROMPT_TEMPLATE,
     input_variables=["context", "question"]
-)
-
-COMBINE_PROMPT = PromptTemplate(
-    template="""
-Combine as respostas abaixo em uma única resposta clara e simplificada.
-
-Respostas:
-{summaries}
-
-Resposta final:
-""",
-    input_variables=["summaries"]
 )
 
 def load_docs(path: str):
@@ -78,8 +68,20 @@ def load_docs(path: str):
         file_data["title"]: file_data["text"]
     }
 
-def split_texts(texts: dict):
-    splitter = RecursiveCharacterTextSplitter(chunk_size=300, chunk_overlap=30)
+def load_all_docs(directory: str):
+    if not os.path.exists(directory):
+        raise FileNotFoundError(f"Diretório {directory} não encontrado.")
+    
+    all_texts = {}
+    for file in os.listdir(directory):
+        if file.endswith(".json"):
+            texts = load_docs(os.path.join(directory, file))
+            all_texts.update(texts)
+    
+    return all_texts
+
+def split_texts(texts: dict, chunk_size: int, chunk_overlap: int):
+    splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
 
     documents = [
         Document(page_content=text, metadata={"source": f"doc_{title}"})
@@ -87,78 +89,140 @@ def split_texts(texts: dict):
     ]
     return splitter.split_documents(documents)
 
-def get_vectorstore(chunks, embeddings):
-    if os.path.exists(INDEX_PATH):
+def get_vectorstore(index_path, chunks, embeddings):
+    if os.path.exists(index_path):
         print("Carregando índice de vetor existente...")
         return FAISS.load_local(
-            INDEX_PATH,
+            index_path,
             embeddings,
             allow_dangerous_deserialization=True
         )
     else:
         print("Criando novo índice de vetor...")
         vectordb = FAISS.from_documents(chunks, embeddings)
-        vectordb.save_local(INDEX_PATH)
-        print(f"Índice de vetor salvo em {INDEX_PATH}.")
+        vectordb.save_local(index_path)
+        print(f"Índice de vetor salvo em {index_path}.")
         return vectordb
 
-# def calling_model():
-#     print("Carregando modelo de linguagem do Hugging Face...")
+def build_full_vectorstore(index_path: str, chunk_size: int, chunk_overlap: int, embeddings):
+    texts = load_all_docs("data/cleaned")
 
-#     pipe = pipeline(
-#         "text-generation",
-#         model=MODEL_NAME,
-#         max_new_tokens=256
-#     )
+    chunks = split_texts(texts, chunk_size, chunk_overlap)
 
-#     llm = HuggingFacePipeline(pipeline=pipe)
-#     return llm
+    vectordb = get_vectorstore(index_path, chunks, embeddings)
+
+    return vectordb
+
+def restart_vectorstore(index_path: str, chunk_size: int, chunk_overlap: int, embed_model_name: str):
+    embeddings = HuggingFaceEmbeddings(
+        model_name=embed_model_name,
+        model_kwargs={"device": "cpu"},
+        encode_kwargs={"normalize_embeddings": True},
+    )
+
+    vector_db = build_full_vectorstore(index_path, chunk_size=chunk_size, chunk_overlap=chunk_overlap, embeddings=embeddings)
+    return
+
+def calling_hf_model(model_name: str):
+    pipe = pipeline(
+        "text-generation",
+        model=model_name,
+        max_new_tokens=512
+    )
+
+    llm = HuggingFacePipeline(pipeline=pipe)
+    return llm
+
+def calling_ollama_model(model_name: str, temperature: float):
+    llm = OllamaLLM(model=model_name, temperature=temperature)
+    return llm
+
+def test_chunk_sizes():
+    chunk_size = [300, 400, 500, 600, 700]
+    for file in os.listdir("data/cleaned/"):
+        if file.endswith(".json"):
+            file_name = file.split(".")[0]
+            print(f"Processando arquivo: {file_name}")
+        
+        print("Carregando documentos...")
+        texts = load_docs(f"data/cleaned/{file_name}.json")
+
+        for c_size in chunk_size:
+            print("Dividindo textos em chunks...")
+            chunk_overlap = []
+            chunk_overlap.append(int(c_size * 0.10))
+            chunk_overlap.append(int(c_size * 0.15))
+            chunk_overlap.append(int(c_size * 0.20))
+
+            for c_overlap in chunk_overlap:
+                print(f"Processando com chunk size {c_size} e chunk overlap {c_overlap}...")
+                chunks = split_texts(texts, c_size, c_overlap)
+
+                print("Criando embeddings...")
+                embeddings = HuggingFaceEmbeddings(
+                    model_name=MODEL_NAME,
+                    model_kwargs={"device": "cpu"},
+                    encode_kwargs={"normalize_embeddings": True},
+                )
+
+                vectordb = get_vectorstore(chunks, embeddings)
+
+                retriever = vectordb.as_retriever(search_kwargs={"k": TOP_K})
+
+                if file_name == "aedesaegypti":
+                    query = "Como o Aedes aegypti se reproduz?"
+                elif file_name == "arboviroses":
+                    query = "O que são arboviroses?"
+                elif file_name == "covid19":
+                    query = "Quais os sintomas da COVID-19?"
+                elif file_name == "dengue":
+                    query = "O que é dengue?"
+                elif file_name == "diabetes":
+                    query = "Quais os riscos do diabetes?"
+                elif file_name == "doencadechagas":
+                    query = "Como se trata a doença de Chagas?"
+                elif file_name == "elefantiase":
+                    query = "O que é elefantíase?"
+                elif file_name == "hipertensao":
+                    query = "O que é hipertensão?"
+                elif file_name == "esquistossomose":
+                    query = "O que é esquistossomose?"
+                elif file_name == "lupus":
+                    query = "Quais os sintomas do lúpus?"
+                elif file_name == "sarampo":
+                    query = "Quais os sintomas do sarampo?"
+                elif file_name == "malaria":
+                    query = "Como se pega malária?"
+
+                docs = retriever.invoke(query)
+
+                with open(f"document_retrieval_test/documentos_relevantes_{file_name}_{c_size}_{c_overlap}.json", "w", encoding="utf-8") as f:
+                    for i, doc in enumerate(docs):
+                        doc_data = {
+                            "page_content": doc.page_content,
+                            "metadata": doc.metadata
+                        }
+                        json.dump(doc_data, f, ensure_ascii=False, indent=4)
+                        f.write("\n")
+    return
 
 def main():
-    print("Carregando documentos...")
-    texts = load_docs("data/cleaned/covid19.json")
-
-    print("Dividindo textos em chunks...")
-    chunks = split_texts(texts)
-
-    print("Criando embeddings...")
+    # test_chunk_sizes()
     embeddings = HuggingFaceEmbeddings(
         model_name=MODEL_NAME,
         model_kwargs={"device": "cpu"},
         encode_kwargs={"normalize_embeddings": True},
     )
 
-    vectordb = get_vectorstore(chunks, embeddings)
+    vector_db = build_full_vectorstore("faiss_vectorstore", chunk_size=500, chunk_overlap=100, embeddings=embeddings)
 
-    retriever = vectordb.as_retriever(search_kwargs={"k": TOP_K})
+    respostas = vector_db.as_retriever(search_kwargs={"k": TOP_K}).invoke("Quais os sintomas do sarampo?")
 
-    query = "Quais são os sintomas da COVID-19?"
+    for resposta in respostas:
+        print(resposta.metadata["source"] + "\n")
+        print(resposta.page_content)
+        print("\n------------------------------\n")
 
-    docs = retriever.invoke(query)
-
-    for i, doc in enumerate(docs):
-        print(f"\n--- Documento {i} ---")
-        print(doc.page_content)
-        print(doc.metadata)
-
-    # llm = calling_model()
-
-    # print("Calculando resposta para a pergunta...")
-
-    # qa_chain = RetrievalQA.from_chain_type(
-    #     llm=llm,
-    #     retriever=retriever,
-    #     chain_type="map_reduce",
-    #     chain_type_kwargs={
-    #         "question_prompt": MAP_PROMPT,
-    #         "combine_prompt": COMBINE_PROMPT
-    #     }
-    # )
-
-    # resposta = qa_chain.invoke("Quais os sintomas da COVID-19?")
-
-    # print(resposta)
-    return
 
 if __name__ == "__main__":
     main()
