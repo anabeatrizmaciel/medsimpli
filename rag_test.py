@@ -1,4 +1,4 @@
-from rag_prep import restart_vectorstore, PROMPT
+from rag_prep import restart_vectorstore
 from rag_response import respond_to_query
 
 EMBED_MODEL_NAME = "pucpr/biobertpt-all"
@@ -13,51 +13,81 @@ CHUNK_OVERLAP = 100
 VECTORDB_PATH = "faiss_vectorstore"
 
 
-"""
-Testa a resposta do modelo sem mudar os parâmetros 
-do vectorstore e do modelo de embedding.
-"""
-def test_response_to_query():
-    respond_to_query(
-        embed_model_name=EMBED_MODEL_NAME,
-        prev_model_name=PREV_MODEL_NAME,
-        top_k=TOP_K,
-        query=QUERY,
-        faiss_index_path=FAISS_INDEX_PATH,
-        temperature=TEMPERATURE
+def run_rag_for_streamlit(
+    query: str,
+    top_k: int = TOP_K,
+    prev_model_name: str = PREV_MODEL_NAME,
+    embed_model_name: str = EMBED_MODEL_NAME,
+    faiss_index_path: str = FAISS_INDEX_PATH,
+    temperature: float = TEMPERATURE,
+):
+    """Executa o pipeline RAG e retorna resposta + documentos para o app."""
+    return respond_to_query(
+        embed_model_name=embed_model_name,
+        prev_model_name=prev_model_name,
+        top_k=top_k,
+        query=query,
+        faiss_index_path=faiss_index_path,
+        temperature=temperature,
+        verbose=False,
     )
-    
-    return
 
-"""
-Reinicia o processo de RAG desde a criação do vectorstore
-com parâmetros definidos nas constantes globais.
 
-ATENÇÃO: para reiniciar o vectorstore, é necessário deletar 
-a pasta "faiss_vectorstore" se ela existir.
-"""
-def test_rag_from_start():
+def test_response_to_query(
+    query: str = QUERY,
+    top_k: int = TOP_K,
+    prev_model_name: str = PREV_MODEL_NAME,
+    embed_model_name: str = EMBED_MODEL_NAME,
+    faiss_index_path: str = FAISS_INDEX_PATH,
+    temperature: float = TEMPERATURE,
+):
+    """Testa o pipeline usando um vectorstore já existente."""
+    return respond_to_query(
+        embed_model_name=embed_model_name,
+        prev_model_name=prev_model_name,
+        top_k=top_k,
+        query=query,
+        faiss_index_path=faiss_index_path,
+        temperature=temperature,
+        verbose=True,
+    )
+
+
+def test_rag_from_start(
+    query: str = QUERY,
+    top_k: int = TOP_K,
+    prev_model_name: str = PREV_MODEL_NAME,
+    embed_model_name: str = EMBED_MODEL_NAME,
+    faiss_index_path: str = FAISS_INDEX_PATH,
+    temperature: float = TEMPERATURE,
+    chunk_size: int = CHUNK_SIZE,
+    chunk_overlap: int = CHUNK_OVERLAP,
+    vectordb_path: str = VECTORDB_PATH,
+):
+    """Recria o vectorstore e depois executa o pipeline."""
     restart_vectorstore(
-        index_path=VECTORDB_PATH,
-        chunk_size=CHUNK_SIZE,
-        chunk_overlap=CHUNK_OVERLAP,
-        embed_model_name=EMBED_MODEL_NAME
+        index_path=vectordb_path,
+        chunk_size=chunk_size,
+        chunk_overlap=chunk_overlap,
+        embed_model_name=embed_model_name,
     )
 
-    respond_to_query(
-        embed_model_name=EMBED_MODEL_NAME,
-        prev_model_name=PREV_MODEL_NAME,
-        top_k=TOP_K,
-        query=QUERY,
-        faiss_index_path=FAISS_INDEX_PATH,
-        temperature=TEMPERATURE
+    return respond_to_query(
+        embed_model_name=embed_model_name,
+        prev_model_name=prev_model_name,
+        top_k=top_k,
+        query=query,
+        faiss_index_path=faiss_index_path,
+        temperature=temperature,
+        verbose=True,
     )
-    
-    return
 
 
 def main():
-    test_response_to_query()
+    resultado = test_response_to_query()
+    print("\n=== RESPOSTA FINAL ===\n")
+    print(resultado["answer"])
+
 
 if __name__ == "__main__":
     main()

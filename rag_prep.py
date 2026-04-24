@@ -1,6 +1,5 @@
 from langchain_core.documents import Document
 from langchain_core.prompts import PromptTemplate
-from langchain_classic.chains import RetrievalQA
 from langchain_huggingface import HuggingFaceEmbeddings, HuggingFacePipeline
 from langchain_ollama import OllamaLLM
 from langchain_community.vectorstores import FAISS
@@ -11,6 +10,8 @@ import json
 
 MODEL_NAME = "pucpr/biobertpt-all"
 TOP_K = 5
+DATA_DIR = "data/cleaned"
+DEFAULT_INDEX_PATH = "faiss_vectorstore"
 
 PROMPT_TEMPLATE = """
 Você é um assistente do MedSimpli, um sistema de apoio à compreensão
@@ -56,32 +57,37 @@ PROMPT = PromptTemplate(
     input_variables=["context", "question"]
 )
 
+
 def load_docs(path: str):
     if not os.path.exists(path):
         raise FileNotFoundError(f"Arquivo {path} não encontrado.")
-    
+
     with open(path, "r", encoding="utf-8") as f:
         file_data = json.load(f)
-        
-    
+
     return {
         file_data["title"]: file_data["text"]
     }
 
+
 def load_all_docs(directory: str):
     if not os.path.exists(directory):
         raise FileNotFoundError(f"Diretório {directory} não encontrado.")
-    
+
     all_texts = {}
     for file in os.listdir(directory):
         if file.endswith(".json"):
             texts = load_docs(os.path.join(directory, file))
             all_texts.update(texts)
-    
+
     return all_texts
 
+
 def split_texts(texts: dict, chunk_size: int, chunk_overlap: int):
-    splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
+    splitter = RecursiveCharacterTextSplitter(
+        chunk_size=chunk_size,
+        chunk_overlap=chunk_overlap
+    )
 
     documents = [
         Document(page_content=text, metadata={"source": f"doc_{title}"})
@@ -89,7 +95,8 @@ def split_texts(texts: dict, chunk_size: int, chunk_overlap: int):
     ]
     return splitter.split_documents(documents)
 
-def get_vectorstore(index_path, chunks, embeddings):
+
+def get_vectorstore(index_path: str, chunks, embeddings):
     if os.path.exists(index_path):
         print("Carregando índice de vetor existente...")
         return FAISS.load_local(
@@ -97,31 +104,52 @@ def get_vectorstore(index_path, chunks, embeddings):
             embeddings,
             allow_dangerous_deserialization=True
         )
-    else:
-        print("Criando novo índice de vetor...")
-        vectordb = FAISS.from_documents(chunks, embeddings)
-        vectordb.save_local(index_path)
-        print(f"Índice de vetor salvo em {index_path}.")
-        return vectordb
 
-def build_full_vectorstore(index_path: str, chunk_size: int, chunk_overlap: int, embeddings):
-    texts = load_all_docs("data/cleaned")
+    if chunks is None:
+        raise ValueError("Chunks não podem ser None ao criar um novo índice de vetor.")
 
-    chunks = split_texts(texts, chunk_size, chunk_overlap)
-
-    vectordb = get_vectorstore(index_path, chunks, embeddings)
-
+    print("Criando novo índice de vetor...")
+    vectordb = FAISS.from_documents(chunks, embeddings)
+    vectordb.save_local(index_path)
+    print(f"Índice de vetor salvo em {index_path}.")
     return vectordb
 
-def restart_vectorstore(index_path: str, chunk_size: int, chunk_overlap: int, embed_model_name: str):
+
+def build_full_vectorstore(
+    index_path: str,
+    chunk_size: int,
+    chunk_overlap: int,
+    embeddings,
+    data_dir: str = DATA_DIR
+):
+    texts = load_all_docs(data_dir)
+    chunks = split_texts(texts, chunk_size, chunk_overlap)
+    vectordb = get_vectorstore(index_path, chunks, embeddings)
+    return vectordb
+
+
+def restart_vectorstore(
+    index_path: str,
+    chunk_size: int,
+    chunk_overlap: int,
+    embed_model_name: str,
+    data_dir: str = DATA_DIR
+):
     embeddings = HuggingFaceEmbeddings(
         model_name=embed_model_name,
         model_kwargs={"device": "cpu"},
         encode_kwargs={"normalize_embeddings": True},
     )
 
-    vector_db = build_full_vectorstore(index_path, chunk_size=chunk_size, chunk_overlap=chunk_overlap, embeddings=embeddings)
-    return
+    vector_db = build_full_vectorstore(
+        index_path=index_path,
+        chunk_size=chunk_size,
+        chunk_overlap=chunk_overlap,
+        embeddings=embeddings,
+        data_dir=data_dir
+    )
+    return vector_db
+
 
 def calling_hf_model(model_name: str):
     pipe = pipeline(
@@ -133,28 +161,37 @@ def calling_hf_model(model_name: str):
     llm = HuggingFacePipeline(pipeline=pipe)
     return llm
 
+
 def calling_ollama_model(model_name: str, temperature: float):
     llm = OllamaLLM(model=model_name, temperature=temperature)
     return llm
 
+
 def test_chunk_sizes():
-    chunk_size = [300, 400, 500, 600, 700]
-    for file in os.listdir("data/cleaned/"):
-        if file.endswith(".json"):
-            file_name = file.split(".")[0]
-            print(f"Processando arquivo: {file_name}")
-        
+    chunk_sizes = [300, 400, 500, 600, 700]
+
+    if not os.path.exists("document_retrieval_test"):
+        os.makedirs("document_retrieval_test")
+
+    for file in os.listdir(DATA_DIR):
+        if not file.endswith(".json"):
+            continue
+
+        file_name = file.split(".")[0]
+        print(f"Processando arquivo: {file_name}")
+
         print("Carregando documentos...")
-        texts = load_docs(f"data/cleaned/{file_name}.json")
+        texts = load_docs(os.path.join(DATA_DIR, f"{file_name}.json"))
 
-        for c_size in chunk_size:
+        for c_size in chunk_sizes:
             print("Dividindo textos em chunks...")
-            chunk_overlap = []
-            chunk_overlap.append(int(c_size * 0.10))
-            chunk_overlap.append(int(c_size * 0.15))
-            chunk_overlap.append(int(c_size * 0.20))
+            chunk_overlaps = [
+                int(c_size * 0.10),
+                int(c_size * 0.15),
+                int(c_size * 0.20),
+            ]
 
-            for c_overlap in chunk_overlap:
+            for c_overlap in chunk_overlaps:
                 print(f"Processando com chunk size {c_size} e chunk overlap {c_overlap}...")
                 chunks = split_texts(texts, c_size, c_overlap)
 
@@ -165,7 +202,8 @@ def test_chunk_sizes():
                     encode_kwargs={"normalize_embeddings": True},
                 )
 
-                vectordb = get_vectorstore(chunks, embeddings)
+                test_index_path = f"faiss_test_{file_name}_{c_size}_{c_overlap}"
+                vectordb = get_vectorstore(test_index_path, chunks, embeddings)
 
                 retriever = vectordb.as_retriever(search_kwargs={"k": TOP_K})
 
@@ -193,18 +231,27 @@ def test_chunk_sizes():
                     query = "Quais os sintomas do sarampo?"
                 elif file_name == "malaria":
                     query = "Como se pega malária?"
+                else:
+                    query = "Explique este conteúdo de forma simples."
 
                 docs = retriever.invoke(query)
 
-                with open(f"document_retrieval_test/documentos_relevantes_{file_name}_{c_size}_{c_overlap}.json", "w", encoding="utf-8") as f:
-                    for i, doc in enumerate(docs):
+                output_path = (
+                    f"document_retrieval_test/documentos_relevantes_"
+                    f"{file_name}_{c_size}_{c_overlap}.json"
+                )
+
+                with open(output_path, "w", encoding="utf-8") as f:
+                    for doc in docs:
                         doc_data = {
                             "page_content": doc.page_content,
                             "metadata": doc.metadata
                         }
                         json.dump(doc_data, f, ensure_ascii=False, indent=4)
                         f.write("\n")
+
     return
+
 
 def main():
     # test_chunk_sizes()
@@ -214,9 +261,16 @@ def main():
         encode_kwargs={"normalize_embeddings": True},
     )
 
-    vector_db = build_full_vectorstore("faiss_vectorstore", chunk_size=500, chunk_overlap=100, embeddings=embeddings)
+    vector_db = build_full_vectorstore(
+        DEFAULT_INDEX_PATH,
+        chunk_size=500,
+        chunk_overlap=100,
+        embeddings=embeddings
+    )
 
-    respostas = vector_db.as_retriever(search_kwargs={"k": TOP_K}).invoke("Quais os sintomas do sarampo?")
+    respostas = vector_db.as_retriever(search_kwargs={"k": TOP_K}).invoke(
+        "Quais os sintomas do sarampo?"
+    )
 
     for resposta in respostas:
         print(resposta.metadata["source"] + "\n")

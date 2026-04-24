@@ -11,17 +11,27 @@ FAISS_INDEX_PATH = "faiss_vectorstore"
 TEMPERATURE = 0.2
 
 
-def respond_to_query(embed_model_name=EMBED_MODEL_NAME, prev_model_name=PREV_MODEL_NAME, top_k=TOP_K, query=QUERY, faiss_index_path=FAISS_INDEX_PATH, temperature=TEMPERATURE):
+def respond_to_query(
+    embed_model_name=EMBED_MODEL_NAME,
+    prev_model_name=PREV_MODEL_NAME,
+    top_k=TOP_K,
+    query=QUERY,
+    faiss_index_path=FAISS_INDEX_PATH,
+    temperature=TEMPERATURE,
+    verbose=True,
+):
     """
     Pipeline para chamada do modelo de geração de texto.
-    Obs: usando modelo do HuggingFace. Caso outra plataforma seja
-    usada, o pipeline muda um pouco, principalmente na função 'calling_model()'.
+    Retorna a resposta e os documentos recuperados para uso na interface.
     """
-    print("Carregando modelo de linguagem do Ollama...")
+
+    if verbose:
+        print("Carregando modelo de linguagem do Ollama...")
 
     llm = calling_ollama_model(prev_model_name, temperature)
 
-    print("Carregando Embeddings do Hugging Face...")
+    if verbose:
+        print("Carregando Embeddings do Hugging Face...")
 
     embeddings = HuggingFaceEmbeddings(
         model_name=embed_model_name,
@@ -29,10 +39,10 @@ def respond_to_query(embed_model_name=EMBED_MODEL_NAME, prev_model_name=PREV_MOD
         encode_kwargs={"normalize_embeddings": True},
     )
 
-    print("Carregando VectorStore FAISS...")
+    if verbose:
+        print("Carregando VectorStore FAISS...")
 
     vectorstore = get_vectorstore(faiss_index_path, None, embeddings)
-
     retriever = vectorstore.as_retriever(search_kwargs={"k": top_k})
 
     multi_query_retriever = MultiQueryRetriever.from_llm(
@@ -40,7 +50,8 @@ def respond_to_query(embed_model_name=EMBED_MODEL_NAME, prev_model_name=PREV_MOD
         llm=llm,
     )
 
-    print("Calculando resposta para a pergunta...")
+    if verbose:
+        print("Calculando resposta para a pergunta...")
 
     qa_chain = RetrievalQA.from_chain_type(
         llm=llm,
@@ -52,20 +63,39 @@ def respond_to_query(embed_model_name=EMBED_MODEL_NAME, prev_model_name=PREV_MOD
 
     resposta = qa_chain.invoke(query)
 
-    print("Documentos mais relevantes para a pergunta:")
-
+    source_documents = []
     for doc in resposta["source_documents"]:
-        print("\n------------------------------\n")
-        print(f"Fonte: {doc.metadata['source']}")
-        print(f"- {doc.page_content}")
+        source_documents.append(
+            {
+                "source": doc.metadata.get("source", "desconhecida"),
+                "content": doc.page_content,
+            }
+        )
 
-    print("\n------------------------------\n")
-    print(f"Resposta: {resposta['result']}")
-    return
+    if verbose:
+        print("Documentos mais relevantes para a pergunta:")
+        for doc in source_documents:
+            print("\n------------------------------\n")
+            print(f"Fonte: {doc['source']}")
+            print(f"- {doc['content']}")
+
+        print("\n------------------------------\n")
+        print(f"Resposta: {resposta['result']}")
+
+    return {
+        "query": query,
+        "answer": resposta["result"],
+        "source_documents": source_documents,
+        "model": prev_model_name,
+        "top_k": top_k,
+        "temperature": temperature,
+    }
+
 
 def main():
-    respond_to_query()
-    return
+    resultado = respond_to_query()
+    print(resultado["answer"])
+
 
 if __name__ == "__main__":
     main()
