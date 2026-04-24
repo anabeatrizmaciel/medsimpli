@@ -1,43 +1,78 @@
 # 🩺 MedSimpli
 
-### *Saúde em linguagem simples — IA aplicada à compreensão de termos médicos em português brasileiro*
+### *Saúde em linguagem simples — RAG aplicado à compreensão de termos médicos em português brasileiro*
 
 ---
 
 ## 📌 Visão Geral
 
-O **MedSimpli** é um sistema de apoio à compreensão de linguagem médica em português brasileiro. A proposta é simples: o usuário faz uma pergunta sobre um termo, doença, sintoma ou orientação de saúde, e o sistema responde com uma explicação clara, acessível e baseada em fontes confiáveis.
+O **MedSimpli** é um protótipo acadêmico que transforma perguntas sobre saúde em respostas claras, acessíveis e baseadas em documentos recuperados da base do sistema.
 
-O sistema utiliza a abordagem **RAG (Retrieval-Augmented Generation)**, que combina:
+A solução utiliza a abordagem **RAG (Retrieval-Augmented Generation)**, combinando:
 
-- **busca semântica** para recuperar os trechos mais relevantes da base documental;
-- **geração com LLM** para transformar esses trechos em uma resposta em linguagem simples;
-- **exibição da fonte** para que o usuário saiba de onde veio a informação.
+- **recuperação semântica** de trechos relevantes da base documental;
+- **geração com LLM** para produzir uma resposta em linguagem simples;
+- **exibição das fontes recuperadas**, promovendo mais transparência e rastreabilidade.
 
-O MedSimpli foi desenvolvido como protótipo acadêmico com foco em acessibilidade, letramento em saúde e contextualização cultural para o público brasileiro.
+O objetivo é apoiar a compreensão de termos médicos, sintomas, doenças, exames e orientações de saúde em **português brasileiro**, com foco em acessibilidade e letramento em saúde.
 
 ---
 
 ## 🎯 Objetivo
 
-> **Transformar informações médicas complexas em linguagem acessível**, sem perder o significado original da informação.
+> **Transformar informações médicas complexas em linguagem acessível, sem perder o sentido original da informação.**
 
-O sistema busca reduzir barreiras cognitivas, aumentar a autonomia do paciente e apoiar atividades educacionais na área de saúde, com atenção especial ao contexto, regionalismos e ao modo como o brasileiro realmente fala sobre saúde.
+O MedSimpli busca reduzir barreiras cognitivas, apoiar a autonomia do usuário e oferecer uma experiência mais compreensível na leitura de conteúdos de saúde.
 
 ---
 
-## ⭐ Funcionalidades
+## 🚀 Funcionalidades
 
-- **Busca semântica** sobre base documental de saúde confiável
-- **Respostas geradas por LLM** em linguagem simples e objetiva
-- **Exibição das fontes** que sustentaram cada resposta
-- **Regras de segurança** — o sistema não fornece diagnóstico, não prescreve tratamento e sinaliza quando não tem informação suficiente
+- **Perguntas em linguagem natural**
+- **Busca semântica** sobre a base documental
+- **Respostas geradas por LLM** em linguagem simples
+- **Exibição dos documentos recuperados**
+- **Regras de segurança**, evitando diagnóstico, prescrição e invenção de informação
+- **Interface web em Streamlit** com foco em demonstração de uso
+
+---
+
+## 🧱 Arquitetura Atual
+
+O projeto está organizado em quatro partes principais:
+
+### `rag_prep.py`
+Responsável por:
+- carregar os documentos da base (`data/cleaned`);
+- quebrar os textos em chunks;
+- gerar embeddings;
+- criar ou carregar o índice vetorial **FAISS**.
+
+### `rag_response.py`
+Responsável por:
+- carregar o modelo via **Ollama**;
+- carregar embeddings e índice vetorial;
+- executar a recuperação semântica;
+- montar o pipeline RAG;
+- retornar a resposta gerada e os documentos recuperados.
+
+### `rag_test.py`
+Camada intermediária usada para:
+- testar o pipeline localmente;
+- servir como ponte entre a interface e o pipeline RAG.
+
+### `app_streamlit.py`
+Interface principal do sistema:
+- recebe a pergunta do usuário;
+- envia os parâmetros para o pipeline;
+- exibe a resposta gerada;
+- exibe os documentos recuperados.
 
 ---
 
 ## 🧠 Prompt Base
 
-```
+```text
 Você é um assistente do MedSimpli, um sistema de apoio à compreensão
 de linguagem médica em português brasileiro.
 
@@ -47,11 +82,9 @@ explicações simples, claras e acessíveis, sempre com base em fontes
 confiáveis recuperadas pelo sistema.
 
 Contexto recuperado:
-"""
 {context}
-"""
 
-Pergunta do usuário: {query}
+Pergunta do usuário: {question}
 
 Sua tarefa é responder à pergunta usando apenas o contexto fornecido.
 
@@ -69,11 +102,6 @@ Siga estas regras:
 - não forneça diagnóstico;
 - não prescreva tratamento;
 - não substitua a avaliação de um profissional de saúde.
-
-Formato esperado da resposta:
-1. explicação simples;
-2. pontos principais, se necessário;
-3. aviso de limitação, quando aplicável.
 ```
 
 ---
@@ -81,48 +109,140 @@ Formato esperado da resposta:
 ## 🛠️ Tecnologias Utilizadas
 
 - **Python 3.10+**
-- **Streamlit** — interface web
+- **Streamlit**
+- **LangChain**
+- **FAISS**
+- **Hugging Face Embeddings**
+- **Ollama**
+- **Qwen 2.5**
+- **JSON** como base documental inicial
 
 ---
 
-## ▶️ Como Executar
+## 📂 Estrutura do Projeto
 
-### 1) Criar ambiente virtual
+```text
+.
+├── app_streamlit.py
+├── rag_prep.py
+├── rag_response.py
+├── rag_test.py
+├── data/
+│   └── cleaned/
+├── faiss_vectorstore/
+├── document_retrieval_test/
+├── requirements.txt
+└── README.md
+```
+
+---
+
+## ▶️ Como Executar Localmente
+
+### 1) Criar e ativar o ambiente virtual
 
 ```bash
 python -m venv venv
-source venv/bin/activate   # Linux/macOS
-venv\Scripts\activate      # Windows
 ```
 
-### 2) Instalar dependências
+**Windows**
+```bash
+venv\Scripts\activate
+```
+
+**Linux/macOS**
+```bash
+source venv/bin/activate
+```
+
+---
+
+### 2) Instalar as dependências
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 3) Indexar a base documental
+---
+
+### 3) Garantir que o Ollama está instalado
+
+Teste no terminal:
 
 ```bash
-python scripts/ingest.py   # gera e valida os chunks
-python scripts/embed.py    # cria o banco vetorial (roda uma vez)
-```
-
-### 4) Executar o app
-
-```bash
-python -m streamlit run app_streamlit.py
+ollama --version
 ```
 
 ---
 
-## 📌 Aviso
+### 4) Gerar ou carregar o índice vetorial
 
-O MedSimpli é um protótipo acadêmico e **NÃO substitui avaliação médica profissional**. As informações fornecidas têm caráter educativo e são baseadas em fontes do Ministério da Saúde.
+```bash
+python rag_prep.py
+```
+
+Esse passo:
+- lê os documentos em `data/cleaned`;
+- gera embeddings;
+- cria ou carrega o índice `faiss_vectorstore`.
+
+---
+
+### 5) Testar o pipeline RAG localmente
+
+```bash
+python rag_test.py
+```
+
+---
+
+### 6) Rodar o modelo no Ollama
+
+Exemplo com um modelo para testes:
+
+```bash
+ollama run qwen2.5:14b
+```
+
+---
+
+### 7) Executar a interface
+
+```bash
+streamlit run app_streamlit.py
+```
+
+---
+
+## ⚠️ Observações Importantes
+
+- O projeto está configurado atualmente para **uso local**.
+- O app atual **não depende mais do backend FastAPI antigo** para funcionar.
+- A qualidade da resposta depende de:
+  - qualidade da recuperação semântica;
+  - qualidade da base documental;
+  - modelo escolhido no Ollama.
+
+---
+
+## 📉 Limitações Atuais
+
+- A base documental ainda é limitada em cobertura.
+- O sistema é um **protótipo acadêmico**, não um produto clínico validado.
+
+---
+
+## 🛡️ Aviso
+
+O MedSimpli **não substitui avaliação médica profissional**.
+
+As respostas têm caráter educativo e informacional.  
+Em caso de dúvidas, sintomas ou decisões sobre tratamento, procure um profissional de saúde.
 
 ---
 
 ## 💙 Autoria
 
-Desenvolvido por **Ana Beatriz Maciel Nunes e Marcelo Heitor de Almeida Lira**
-Protótipo acadêmico para estudo de NLP e RAG aplicados à área de saúde.
+Desenvolvido por **Ana Beatriz Maciel Nunes** e **Marcelo Heitor de Almeida Lira**.
+
+Protótipo acadêmico desenvolvido na disciplina **Oficina II**, com foco em **RAG, NLP e acessibilidade da informação em saúde**.
