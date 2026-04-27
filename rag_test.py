@@ -84,7 +84,7 @@ def test_rag_from_start(
 
 
 def main():
-    resultado = test_response_to_query()
+    resultado = test_rag_from_start()
     print("\n=== RESPOSTA FINAL ===\n")
     print(resultado["answer"])
 

@@ -9,7 +9,7 @@ import os
 import json
 
 MODEL_NAME = "pucpr/biobertpt-all"
-TOP_K = 5
+TOP_K = 7
 DATA_DIR = "data/cleaned"
 DEFAULT_INDEX_PATH = "faiss_vectorstore"
 
@@ -162,6 +162,35 @@ def calling_hf_model(model_name: str):
     return llm
 
 
+"""
+Função para testar os documentos semelhantes
+que o retriever devolve, sem LLM para
+inferência de texto
+"""
+def test_similarity_search():
+    embeddings = HuggingFaceEmbeddings(
+        model_name=MODEL_NAME,
+        model_kwargs={"device": "cpu"},
+        encode_kwargs={"normalize_embeddings": True},
+    )
+
+    vector_db = build_full_vectorstore(
+        DEFAULT_INDEX_PATH,
+        chunk_size=700,
+        chunk_overlap=140,
+        embeddings=embeddings
+    )
+
+    retriever = vector_db.as_retriever(search_kwargs={"k": TOP_K})
+    query = "Quais os sinais e sintomas mais comuns da covid-19?"
+    docs = retriever.invoke(query)
+
+    for doc in docs:
+        print(doc.metadata["source"] + "\n")
+        print(doc.page_content)
+        print("\n------------------------------\n")
+
+
 def calling_ollama_model(model_name: str, temperature: float):
     llm = OllamaLLM(model=model_name, temperature=temperature)
     return llm
@@ -255,27 +284,8 @@ def test_chunk_sizes():
 
 def main():
     # test_chunk_sizes()
-    embeddings = HuggingFaceEmbeddings(
-        model_name=MODEL_NAME,
-        model_kwargs={"device": "cpu"},
-        encode_kwargs={"normalize_embeddings": True},
-    )
 
-    vector_db = build_full_vectorstore(
-        DEFAULT_INDEX_PATH,
-        chunk_size=500,
-        chunk_overlap=100,
-        embeddings=embeddings
-    )
-
-    respostas = vector_db.as_retriever(search_kwargs={"k": TOP_K}).invoke(
-        "Quais os sintomas do sarampo?"
-    )
-
-    for resposta in respostas:
-        print(resposta.metadata["source"] + "\n")
-        print(resposta.page_content)
-        print("\n------------------------------\n")
+    test_similarity_search()
 
 
 if __name__ == "__main__":
