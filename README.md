@@ -70,6 +70,11 @@ Interface principal do sistema:
 
 ---
 
+## 🤖 Arquitetura RAG
+
+![Arquitetura RAG Medsimpli](docs/architecture.png)
+---
+
 ## 🧠 Prompt Base
 
 ```text
@@ -230,6 +235,12 @@ streamlit run app_streamlit.py
 - A base documental ainda é limitada em cobertura.
 - O sistema é um **protótipo acadêmico**, não um produto clínico validado.
 
+---
+
+## 📒 Avaliação e apresentação:
+
+- Link da planilha de avaliação: https://docs.google.com/spreadsheets/d/1WvPBUsMf4o2nyYfV4cZjtiGDyvoLSWquX00btC6P-As/edit?gid=674191125#gid=674191125
+- Link da apresentação: https://www.canva.com/design/DAG4Ny1ttxE/I5Law8-SntsOYFDkEcgVjw/edit
 ---
 
 ## 🛡️ Aviso
