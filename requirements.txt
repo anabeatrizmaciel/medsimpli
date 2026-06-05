@@ -16,3 +16,6 @@ langchain_text_splitters
 faiss-cpu
 transformers
 sentence-transformers
+pypdf
+langchain-openai
+ragas==0.1.21
