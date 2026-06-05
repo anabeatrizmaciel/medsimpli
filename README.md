@@ -1,20 +1,24 @@
 # 🩺 MedSimpli
 
-### *Saúde em linguagem simples — RAG aplicado à compreensão de termos médicos em português brasileiro*
+### *Saúde em linguagem simples — RAG e Agentic RAG aplicados à compreensão de informações médicas em português brasileiro*
 
 ---
 
 ## 📌 Visão Geral
 
-O **MedSimpli** é um protótipo acadêmico que transforma perguntas sobre saúde em respostas claras, acessíveis e baseadas em documentos recuperados da base do sistema.
+O **MedSimpli** é um protótipo acadêmico que transforma perguntas sobre saúde em respostas mais claras, acessíveis e baseadas em documentos recuperados da base do sistema.
 
-A solução utiliza a abordagem **RAG (Retrieval-Augmented Generation)**, combinando:
+A solução utiliza a abordagem **RAG (Retrieval-Augmented Generation)** e uma evolução com **Agentic RAG**, combinando:
 
-- **recuperação semântica** de trechos relevantes da base documental;
-- **geração com LLM** para produzir uma resposta em linguagem simples;
-- **exibição das fontes recuperadas**, promovendo mais transparência e rastreabilidade.
+- recuperação semântica de trechos relevantes da base documental;
+- geração de respostas em linguagem simples;
+- exibição das fontes recuperadas;
+- classificação de intenção da pergunta;
+- validação do contexto recuperado;
+- fallback para perguntas sensíveis ou fora do domínio;
+- avaliação experimental com RAGAS.
 
-O objetivo é apoiar a compreensão de termos médicos, sintomas, doenças, exames e orientações de saúde em **português brasileiro**, com foco em acessibilidade e letramento em saúde.
+O objetivo é apoiar a compreensão de termos médicos, doenças, sintomas, exames e orientações de saúde em **português brasileiro**, com foco em acessibilidade, rastreabilidade e letramento em saúde.
 
 ---
 
@@ -28,51 +32,112 @@ O MedSimpli busca reduzir barreiras cognitivas, apoiar a autonomia do usuário e
 
 ## 🚀 Funcionalidades
 
-- **Perguntas em linguagem natural**
-- **Busca semântica** sobre a base documental
-- **Respostas geradas por LLM** em linguagem simples
-- **Exibição dos documentos recuperados**
-- **Regras de segurança**, evitando diagnóstico, prescrição e invenção de informação
-- **Interface web em Streamlit** com foco em demonstração de uso
+- Perguntas em linguagem natural
+- Busca semântica sobre documentos de saúde
+- Respostas geradas por LLM em linguagem simples
+- Exibição dos documentos recuperados
+- Conversão de PDFs oficiais para JSON
+- Criação e carregamento de índice vetorial FAISS
+- Teste de recuperação sem LLM
+- Teste de resposta completa com LLM via Ollama
+- Camada Agentic RAG com:
+  - classificação de intenção;
+  - reescrita de consulta;
+  - recuperação de contexto;
+  - validação de contexto;
+  - extração de termos;
+  - geração de resposta simples;
+  - fallback para perguntas sensíveis;
+  - fallback para perguntas fora do domínio.
+- Interface web em Streamlit
+- Script de avaliação experimental com RAGAS
 
 ---
 
 ## 🧱 Arquitetura Atual
 
-O projeto está organizado em quatro partes principais:
+O projeto está organizado em seis partes principais.
+
+### `pdf_to_json.py`
+
+Responsável por:
+
+- ler PDFs em `data/raw`;
+- extrair texto página por página;
+- gerar arquivos JSON em `data/cleaned`;
+- preservar metadados como título, ano, tipo de documento, arquivo de origem e páginas.
 
 ### `rag_prep.py`
+
 Responsável por:
-- carregar os documentos da base (`data/cleaned`);
-- quebrar os textos em chunks;
+
+- carregar documentos processados em `data/cleaned`;
+- limpar páginas editoriais ou pouco úteis para recuperação;
+- quebrar textos em chunks;
 - gerar embeddings;
-- criar ou carregar o índice vetorial **FAISS**.
+- criar ou carregar o índice vetorial **FAISS**;
+- executar recuperação de documentos;
+- aplicar ajustes de recuperação, como reranking por termos da pergunta.
 
 ### `rag_response.py`
-Responsável por:
+
+Responsável pelo pipeline RAG clássico:
+
 - carregar o modelo via **Ollama**;
-- carregar embeddings e índice vetorial;
-- executar a recuperação semântica;
-- montar o pipeline RAG;
-- retornar a resposta gerada e os documentos recuperados.
+- carregar embeddings e índice FAISS;
+- recuperar documentos relevantes;
+- montar o prompt com contexto;
+- gerar resposta com LLM;
+- retornar resposta e documentos utilizados.
 
 ### `rag_test.py`
-Camada intermediária usada para:
-- testar o pipeline localmente;
-- servir como ponte entre a interface e o pipeline RAG.
+
+Camada de teste local do RAG:
+
+- cria o índice FAISS se ele ainda não existir;
+- usa o índice existente quando disponível;
+- permite testar apenas recuperação;
+- permite testar resposta completa com LLM;
+- só recria o índice quando solicitado explicitamente com `--force-rebuild`.
+
+### `agentic/`
+
+Contém a camada **Agentic RAG**, incluindo:
+
+- `agent.py`: orquestra o fluxo do agente;
+- `skills.py`: implementa as skills do agente;
+- `prompts.py`: concentra prompts auxiliares;
+- `mock_contexts.json`: contextos simulados para testes controlados;
+- `test_agent.py`: teste do agente com mock;
+- `test_agent_faiss.py`: teste do agente integrado ao FAISS;
+- `SKILL.md`: documentação das skills.
 
 ### `app_streamlit.py`
+
 Interface principal do sistema:
+
 - recebe a pergunta do usuário;
-- envia os parâmetros para o pipeline;
+- envia a pergunta para o pipeline;
 - exibe a resposta gerada;
 - exibe os documentos recuperados.
+
+### `ragas_eval.py`
+
+Script de avaliação experimental:
+
+- compara o RAG clássico com o Agentic RAG;
+- utiliza perguntas de referência;
+- executa avaliação com RAGAS;
+- salva resultados em `ragas_outputs/`.
+
+> Observação: a execução completa do RAGAS pode exigir mais memória RAM e configuração de avaliador externo, como uma chave de API, dependendo da versão e das métricas utilizadas.
 
 ---
 
 ## 🤖 Arquitetura RAG
 
-![Arquitetura RAG Medsimpli](docs/architecture.png)
+![Arquitetura RAG MedSimpli](docs/architecture.png)
+
 ---
 
 ## 🧠 Prompt Base
@@ -89,7 +154,8 @@ confiáveis recuperadas pelo sistema.
 Contexto recuperado:
 {context}
 
-Pergunta do usuário: {question}
+Pergunta do usuário:
+{question}
 
 Sua tarefa é responder à pergunta usando apenas o contexto fornecido.
 
@@ -118,9 +184,13 @@ Siga estas regras:
 - **LangChain**
 - **FAISS**
 - **Hugging Face Embeddings**
+- **Sentence Transformers**
 - **Ollama**
 - **Qwen 2.5**
-- **JSON** como base documental inicial
+- **pypdf**
+- **JSON**
+- **RAGAS**
+- **Pandas**
 
 ---
 
@@ -128,17 +198,148 @@ Siga estas regras:
 
 ```text
 .
+├── agentic/
+│   ├── __init__.py
+│   ├── agent.py
+│   ├── skills.py
+│   ├── prompts.py
+│   ├── mock_contexts.json
+│   ├── SKILL.md
+│   ├── test_agent.py
+│   └── test_agent_faiss.py
+│
+├── data/
+│   ├── raw/
+│   └── cleaned/
+│
+├── docs/
+│   └── architecture.png
+│
+├── legacy/
+│
 ├── app_streamlit.py
+├── data_cleaning.py
+├── pdf_to_json.py
 ├── rag_prep.py
 ├── rag_response.py
 ├── rag_test.py
-├── data/
-│   └── cleaned/
-├── faiss_vectorstore/
-├── document_retrieval_test/
+├── ragas_eval.py
 ├── requirements.txt
-└── README.md
+├── README.md
+└── render.yaml
 ```
+
+Pastas geradas localmente e normalmente não versionadas:
+
+```text
+faiss_vectorstore/
+ragas_outputs/
+venv/
+__pycache__/
+```
+
+---
+
+## 📚 Base Documental
+
+A base documental do MedSimpli é composta por documentos oficiais em PDF, previamente convertidos para JSON antes da criação do índice vetorial FAISS.
+
+Os PDFs originais devem ser armazenados em:
+
+```text
+data/raw/
+```
+
+Após a extração de texto, os arquivos processados são gerados em:
+
+```text
+data/cleaned/
+```
+
+Cada JSON contém:
+
+- título do documento;
+- ano de publicação;
+- tipo do documento;
+- arquivo de origem;
+- texto completo;
+- páginas extraídas individualmente.
+
+Essa estrutura foi adotada para permitir maior rastreabilidade entre a resposta gerada e o documento original, facilitando a identificação da fonte e da página de onde o contexto foi recuperado.
+
+### Critérios de seleção da base
+
+A base atual foi reorganizada para priorizar documentos que fossem:
+
+- oficiais ou institucionais;
+- escritos em português brasileiro;
+- relacionados diretamente a doenças e agravos de saúde;
+- explicativos o suficiente para apoiar respostas em linguagem simples;
+- menores e mais controláveis computacionalmente;
+- menos propensos a gerar excesso de chunks ou ruído na recuperação.
+
+Páginas isoladas sobre doenças específicas, como conteúdos no formato “Saúde de A a Z”, podem repetir muitos termos genéricos, como “sintomas”, “tratamento” e “diagnóstico”, aumentando o risco de recuperação de trechos irrelevantes. Isso era um problema durante os testes do RAG, principalmente com o documento de Lúpus.
+
+Por isso, a base foi ajustada para utilizar documentos mais gerais, porém ainda focados em doenças, buscando equilibrar:
+
+```text
+cobertura temática
++ qualidade da fonte
++ custo computacional
++ relevância para recuperação
+```
+
+### Documentos utilizados
+
+A base atual contempla três eixos principais de saúde:
+
+1. **Hepatites virais**  
+   Documento voltado à explicação das hepatites A, B, C, D e E, com informações sobre transmissão, sintomas, prevenção, testagem e acompanhamento.
+
+2. **Doenças negligenciadas**  
+   Documento com cobertura de diferentes doenças e agravos negligenciados, como hanseníase, esquistossomose, malária, tuberculose, raiva, tracoma, leishmaniose e outras condições relevantes para saúde pública.
+
+3. **Arboviroses urbanas**  
+   Documento voltado a dengue, Zika e chikungunya, incluindo informações clínicas, sinais e sintomas, diagnóstico diferencial e orientações de cuidado na atenção primária.
+
+Essa composição foi escolhida para ampliar a variedade temática da base sem recorrer a documentos excessivamente grandes ou a páginas isoladas muito repetitivas.
+
+### Processamento dos documentos
+
+O fluxo de preparação da base segue as etapas:
+
+```text
+PDFs em data/raw/
+→ extração de texto por página
+→ geração de JSON em data/cleaned/
+→ limpeza de páginas editoriais ou pouco úteis
+→ divisão em chunks
+→ geração de embeddings
+→ criação do índice FAISS
+```
+
+Durante a preparação, o sistema pode ignorar páginas com baixo valor para recuperação, como:
+
+- capas;
+- sumários;
+- fichas catalográficas;
+- referências bibliográficas;
+- páginas finais de pesquisa de satisfação;
+- trechos predominantemente editoriais.
+
+Essa limpeza é importante porque tais páginas podem conter palavras relevantes, mas não oferecem explicações úteis para responder às perguntas do usuário.
+
+### Limitações da base
+
+Apesar da curadoria, a base ainda apresenta limitações:
+
+- a cobertura de doenças ainda é parcial;
+- algumas perguntas podem recuperar trechos pouco específicos;
+- documentos em PDF podem gerar extrações com quebras de linha ou ruídos;
+- perguntas muito curtas, como “O que é dengue?”, podem exigir estratégias adicionais de recuperação;
+- a recuperação semântica pode precisar de reranking, filtros por doença ou busca híbrida.
+
+Assim, a base atual deve ser entendida como uma base experimental e controlada, adequada para testes acadêmicos de RAG e Agentic RAG, mas ainda não como uma base clínica completa.
 
 ---
 
@@ -151,11 +352,13 @@ python -m venv venv
 ```
 
 **Windows**
+
 ```bash
 venv\Scripts\activate
 ```
 
 **Linux/macOS**
+
 ```bash
 source venv/bin/activate
 ```
@@ -178,40 +381,100 @@ Teste no terminal:
 ollama --version
 ```
 
----
-
-### 4) Gerar ou carregar o índice vetorial
+Baixe o modelo usado nos testes:
 
 ```bash
-python rag_prep.py
+ollama pull qwen2.5:3b
 ```
 
-Esse passo:
-- lê os documentos em `data/cleaned`;
-- gera embeddings;
-- cria ou carrega o índice `faiss_vectorstore`.
-
----
-
-### 5) Testar o pipeline RAG localmente
+ou:
 
 ```bash
-python rag_test.py
+ollama pull qwen2.5:7b
 ```
 
 ---
 
-### 6) Rodar o modelo no Ollama
+### 4) Converter PDFs para JSON
 
-Exemplo com um modelo para testes:
+Coloque os PDFs em:
+
+```text
+data/raw/
+```
+
+Depois execute:
 
 ```bash
-ollama run qwen2.5:14b
+python pdf_to_json.py
+```
+
+Esse passo gera os arquivos processados em:
+
+```text
+data/cleaned/
 ```
 
 ---
 
-### 7) Executar a interface
+### 5) Criar ou carregar o índice FAISS
+
+```bash
+python rag_test.py --build
+```
+
+Esse comando cria o índice FAISS se ele ainda não existir.  
+Se o índice já existir, ele será carregado e não será recriado.
+
+Para forçar recriação do índice:
+
+```bash
+python rag_test.py --force-rebuild
+```
+
+---
+
+### 6) Testar apenas a recuperação
+
+```bash
+python rag_test.py --retrieval --query "O que são hepatites virais?"
+```
+
+Exemplo com outra pergunta:
+
+```bash
+python rag_test.py --retrieval --query "O que é dengue?"
+```
+
+---
+
+### 7) Testar o RAG clássico com LLM
+
+```bash
+python rag_test.py --response --model qwen2.5:3b --query "O que são hepatites virais?"
+```
+
+---
+
+### 8) Testar o Agentic RAG com FAISS
+
+```bash
+python -m agentic.test_agent_faiss
+```
+
+Esse teste verifica o fluxo:
+
+```text
+classificação de intenção
+→ escolha da consulta
+→ recuperação FAISS
+→ validação de contexto
+→ resposta ou fallback
+```
+
+---
+
+### 9) Executar a interface
 
 ```bash
 streamlit run app_streamlit.py
@@ -219,28 +482,77 @@ streamlit run app_streamlit.py
 
 ---
 
+## 🧪 Avaliação com RAGAS
+
+O arquivo `ragas_eval.py` contém uma avaliação experimental para comparar:
+
+```text
+classic_rag
+agentic_rag
+```
+
+Para rodar:
+
+```bash
+python ragas_eval.py
+```
+
+Os resultados são salvos em:
+
+```text
+ragas_outputs/
+```
+
+A avaliação completa pode exigir:
+
+- mais memória RAM;
+- modelo local carregado via Ollama;
+- configuração de avaliador externo, dependendo das métricas do RAGAS;
+- ajuste de versão do RAGAS.
+
+Em caso de conflito de versão, pode ser útil instalar uma versão estável:
+
+```bash
+pip install ragas==0.1.21 datasets pandas langchain-openai
+```
+
+Se for utilizar avaliador externo via OpenAI no PowerShell:
+
+```bash
+$env:OPENAI_API_KEY="sua-chave"
+```
+
+---
+
 ## ⚠️ Observações Importantes
 
-- O projeto está configurado atualmente para **uso local**.
-- O app atual **não depende mais do backend FastAPI antigo** para funcionar.
+- O projeto está configurado atualmente para uso local.
+- O app atual não depende mais do backend FastAPI antigo para funcionar.
 - A qualidade da resposta depende de:
-  - qualidade da recuperação semântica;
   - qualidade da base documental;
-  - modelo escolhido no Ollama.
+  - qualidade da recuperação semântica;
+  - qualidade dos chunks;
+  - modelo escolhido no Ollama;
+  - configuração do `top_k`.
+- A camada Agentic RAG não substitui a recuperação, mas adiciona controle de fluxo, validação e fallback.
 
 ---
 
 ## 📉 Limitações Atuais
 
 - A base documental ainda é limitada em cobertura.
-- O sistema é um **protótipo acadêmico**, não um produto clínico validado.
+- A recuperação semântica ainda pode retornar trechos pouco relevantes para algumas perguntas.
+- Perguntas curtas podem exigir busca híbrida, reranking ou filtros adicionais por doença.
+- A execução local pode ser limitada por memória RAM.
+- O sistema é um protótipo acadêmico, não um produto clínico validado.
 
 ---
 
-## 📒 Avaliação e apresentação:
+## 📒 Avaliação e Apresentação
 
 - Link da planilha de avaliação: https://docs.google.com/spreadsheets/d/1WvPBUsMf4o2nyYfV4cZjtiGDyvoLSWquX00btC6P-As/edit?gid=674191125#gid=674191125
 - Link da apresentação: https://www.canva.com/design/DAG4Ny1ttxE/I5Law8-SntsOYFDkEcgVjw/edit
+
 ---
 
 ## 🛡️ Aviso
@@ -256,4 +568,4 @@ Em caso de dúvidas, sintomas ou decisões sobre tratamento, procure um profissi
 
 Desenvolvido por **Ana Beatriz Maciel Nunes** e **Marcelo Heitor de Almeida Lira**.
 
-Protótipo acadêmico desenvolvido na disciplina **Oficina II**, com foco em **RAG, NLP e acessibilidade da informação em saúde**.
+Protótipo acadêmico desenvolvido na disciplina **Oficina II**, com foco em **RAG, Agentic RAG, NLP e acessibilidade da informação em saúde**.
