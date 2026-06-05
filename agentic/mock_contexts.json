@@ -1,0 +1,58 @@
+[
+  {
+    "id": "ctx_001",
+    "source": "Glossário do Ministério da Saúde",
+    "type": "glossario",
+    "year": 2004,
+    "page": 15,
+    "content": "O Glossário do Ministério da Saúde reúne termos, siglas e conceitos utilizados no âmbito do Ministério da Saúde."
+  },
+  {
+    "id": "ctx_002",
+    "source": "Guia de Vigilância em Saúde - Volume 2",
+    "type": "guia_vigilancia",
+    "year": 2024,
+    "page": 727,
+    "content": "As arboviroses de importância em saúde pública no Brasil incluem dengue, chikungunya e Zika."
+  },
+  {
+    "id": "ctx_003",
+    "source": "Caderno de Atenção Básica 21",
+    "type": "atencao_basica",
+    "year": 2008,
+    "page": 21,
+    "content": "O caderno aborda vigilância em saúde na atenção básica, incluindo dengue, esquistossomose, hanseníase, malária, tracoma e tuberculose."
+  },
+  {
+    "id": "ctx_004",
+    "source": "Doenças Infecciosas e Parasitárias: Guia de Bolso",
+    "type": "guia_bolso",
+    "year": 2010,
+    "page": 75,
+    "content": "O guia reúne informações sobre doenças infecciosas e parasitárias de interesse para a saúde pública."
+  },
+  {
+    "id": "ctx_005",
+    "source": "Guia de Vigilância em Saúde - Volume 2",
+    "type": "guia_vigilancia",
+    "year": 2024,
+    "page": 921,
+    "content": "A malária é uma doença infecciosa febril aguda de importância epidemiológica, especialmente em determinadas regiões do Brasil."
+  },
+  {
+    "id": "ctx_006",
+    "source": "Guia de Vigilância em Saúde - Volume 2",
+    "type": "guia_vigilancia",
+    "year": 2024,
+    "page": 549,
+    "content": "A tuberculose é uma doença infecciosa de relevância para a saúde pública e requer ações de vigilância, diagnóstico e acompanhamento."
+  },
+  {
+    "id": "ctx_007",
+    "source": "Glossário do Ministério da Saúde",
+    "type": "glossario",
+    "year": 2004,
+    "page": 5,
+    "content": "CID significa Classificação Internacional de Doenças."
+    }
+]
