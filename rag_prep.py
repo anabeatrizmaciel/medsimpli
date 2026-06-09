@@ -13,7 +13,13 @@ from langchain_ollama import OllamaLLM
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 
-MODEL_NAME = "pucpr/biobertpt-all"
+# MODEL_NAME = "pucpr/biobertpt-all"
+# MODEL_NAME = "nomic-ai/nomic-embed-text-v1"
+# MODEL_NAME = "mixedbread-ai/mxbai-embed-large-v1"
+# MODEL_NAME = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+# MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
+# MODEL_NAME = "BAAI/bge-small-en-v1.5"
+MODEL_NAME = "BAAI/bge-large-en-v1.5"
 TOP_K = 5
 DATA_DIR = "data/cleaned"
 DEFAULT_INDEX_PATH = "faiss_vectorstore"
@@ -393,7 +399,9 @@ def split_texts(
                 if is_noise_page(page_text):
                     ignored_pages += 1
                     ignored_pages_total += 1
-                    log(f"Página {page_number} ignorada por ruído editorial/referências.")
+                    log(
+                        f"Página {page_number} ignorada por ruído editorial/referências."
+                    )
                     continue
 
                 page_document = Document(
@@ -642,7 +650,9 @@ def retrieve_documents(
         )
 
         if reranked_docs and reranked_docs[0]["keyword_score"] == 0:
-            log("Nenhum candidato continha diretamente os termos da pergunta. Mantendo ordem vetorial.")
+            log(
+                "Nenhum candidato continha diretamente os termos da pergunta. Mantendo ordem vetorial."
+            )
             selected_docs = docs[:top_k]
         else:
             selected_docs = [item["doc"] for item in reranked_docs[:top_k]]
@@ -681,8 +691,79 @@ def main():
         chunk_overlap=DEFAULT_CHUNK_OVERLAP,
         embed_model_name=MODEL_NAME,
         data_dir=DATA_DIR,
-        force_rebuild=False,
+        force_rebuild=True,
     )
+
+    generate_retrieval_report()
+
+
+def generate_retrieval_report(
+    index_path: str = DEFAULT_INDEX_PATH,
+    embed_model_name: str = MODEL_NAME,
+    data_dir: str = DATA_DIR,
+    top_k: int = 3,
+    output_dir: str = "embeddings_results",
+):
+    output_path = Path(output_dir)
+    output_path.mkdir(parents=True, exist_ok=True)
+
+    test_questions = [
+        "O que é dengue?",
+        "O que significa CID?",
+        "Como a malária é transmitida?",
+        "O que são hepatites virais?",
+        "O que é esquistossomose?",
+    ]
+
+    log("=" * 80)
+    log("Gerando relatório de recuperação")
+    log(f"Modelo: {embed_model_name}")
+    log(f"Índice: {index_path}")
+    log(f"Top-k: {top_k}")
+    log("=" * 80)
+
+    results = {}
+
+    for question in test_questions:
+        log(f"Processando: {question}")
+        docs = retrieve_documents(
+            query=question,
+            top_k=top_k,
+            index_path=index_path,
+            embed_model_name=embed_model_name,
+        )
+        results[question] = docs
+
+    lines = []
+    lines.append("# Relatório de Recuperação — MedSimpli\n")
+    lines.append(f"_Modelo de embedding: `{embed_model_name}`_\n")
+    lines.append(f"_Índice FAISS: `{index_path}`_\n")
+    lines.append(f"_Gerado em: {time.strftime('%d/%m/%Y %H:%M')}_\n")
+    lines.append("---\n")
+    lines.append("## Resultados\n")
+
+    for question, docs in results.items():
+        lines.append(f'### Pergunta: "{question}"\n')
+
+        if not docs:
+            lines.append("_Nenhum documento recuperado._\n")
+            continue
+
+        for doc in docs:
+            lines.append(
+                f"- **Rank {doc['rank']}** — {doc['source']}, "
+                f"p. {doc['page']}, {doc['year']}  \n"
+            )
+            snippet = doc["content"][:300].replace("\n", " ")
+            lines.append(f"  ```\n  {snippet}\n  ```\n")
+
+        lines.append("")
+
+    report_path = output_path / f"retrieval_report_{MODEL_NAME.split('/')[0]}.md"
+    report_path.write_text("".join(lines), encoding="utf-8")
+    log(f"Relatório salvo em: {report_path}")
+
+    return str(report_path)
 
 
 if __name__ == "__main__":
