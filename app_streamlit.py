@@ -4,6 +4,9 @@ from html import escape
 
 import streamlit as st
 
+import requests
+from dotenv import load_dotenv
+
 from rag_test import ensure_or_build_faiss
 from rag_response import respond_to_query
 from agentic.agent import build_fallback_response, choose_query_to_use
@@ -14,16 +17,19 @@ from agentic.skills import (
     validate_context_skill,
 )
 
+load_dotenv()
+
 APP_TITLE = "MedSimpli"
 APP_TAGLINE = (
     "Plataforma acadêmica para apoio à compreensão de informações médicas "
     "em linguagem simples, com RAG, FAISS e camada Agentic RAG."
 )
 DEFAULT_RAG_MODEL = os.getenv("MEDSIMPLI_MODEL", "qwen2.5:3b")
-DEFAULT_EMBED_MODEL = os.getenv("MEDSIMPLI_EMBED_MODEL", "pucpr/biobertpt-all")
+DEFAULT_EMBED_MODEL = os.getenv("MEDSIMPLI_EMBED_MODEL", "nomic-ai/nomic-embed-text-v1")
 DEFAULT_FAISS_PATH = os.getenv("MEDSIMPLI_FAISS_PATH", "faiss_vectorstore")
 DEFAULT_RAG_TEMPERATURE = float(os.getenv("MEDSIMPLI_RAG_TEMPERATURE", "0.2"))
 DEFAULT_TOP_K = int(os.getenv("MEDSIMPLI_TOP_K", "1"))
+OLLAMA_BASE_URL = os.getenv("OLLAMA_CLOUD_MODELS", "http://localhost:11434")
 
 SAMPLE_QUESTIONS = [
     "O que são hepatites virais?",
@@ -35,6 +41,16 @@ DISCLAIMER = (
     "Este protótipo tem finalidade acadêmica e informativa. "
     "As respostas não substituem avaliação, diagnóstico ou orientação de profissionais de saúde."
 )
+
+
+def fetch_ollama_models(base_url: str) -> list[str]:
+    try:
+        response = requests.get(f"{base_url.rstrip('/')}/api/tags", timeout=5)
+        response.raise_for_status()
+        data = response.json()
+        return [m["name"] for m in data.get("models", [])]
+    except Exception:
+        return ["qwen2.5:3b"]  # fallback
 
 
 def _safe(value) -> str:
@@ -655,6 +671,12 @@ def main():
     render_sidebar()
 
     options = ["tinyllama", "qwen2.5:0.5b", "qwen2.5:1.5b", "qwen2.5:3b", "qwen2.5:7b", "qwen2.5:14b"]
+
+    ollama_models = fetch_ollama_models(str(OLLAMA_BASE_URL))
+
+    if ollama_models:
+        options = ollama_models
+
     rag_model_name = st.sidebar.selectbox(
         "Modelo",
         options=options,

@@ -2,3 +2,4 @@ venv
 voz_temp.mp3
 __pycache__
 faiss_vectorstore
+.env
