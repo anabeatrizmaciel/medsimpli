@@ -13,13 +13,8 @@ from langchain_ollama import OllamaLLM
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 
-# MODEL_NAME = "pucpr/biobertpt-all"
-# MODEL_NAME = "nomic-ai/nomic-embed-text-v1"
-# MODEL_NAME = "mixedbread-ai/mxbai-embed-large-v1"
-# MODEL_NAME = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
-# MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
-# MODEL_NAME = "BAAI/bge-small-en-v1.5"
-MODEL_NAME = "BAAI/bge-large-en-v1.5"
+# Outros nomes testados: pucpr/biobertpt-all, mixedbread-ai/mxbai-embed-large-v1, sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2, sentence-transformers/all-MiniLM-L6-v2, BAAI/bge-small-en-v1.5, BAAI/bge-large-en-v1.5
+MODEL_NAME = "nomic-ai/nomic-embed-text-v1"
 TOP_K = 5
 DATA_DIR = "data/cleaned"
 DEFAULT_INDEX_PATH = "faiss_vectorstore"
