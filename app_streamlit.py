@@ -19,7 +19,7 @@ APP_TAGLINE = (
     "Plataforma acadêmica para apoio à compreensão de informações médicas "
     "em linguagem simples, com RAG, FAISS e camada Agentic RAG."
 )
-DEFAULT_RAG_MODEL = os.getenv("MEDSIMPLI_MODEL", "tinyllama")
+DEFAULT_RAG_MODEL = os.getenv("MEDSIMPLI_MODEL", "qwen2.5:3b")
 DEFAULT_EMBED_MODEL = os.getenv("MEDSIMPLI_EMBED_MODEL", "pucpr/biobertpt-all")
 DEFAULT_FAISS_PATH = os.getenv("MEDSIMPLI_FAISS_PATH", "faiss_vectorstore")
 DEFAULT_RAG_TEMPERATURE = float(os.getenv("MEDSIMPLI_RAG_TEMPERATURE", "0.2"))
