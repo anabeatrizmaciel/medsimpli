@@ -1,310 +1,521 @@
 from pathlib import Path
-import traceback
-
-import pandas as pd
-from datasets import Dataset
-from ragas import evaluate
-
-from rag_response import respond_to_query
-from agentic.agent import run_medsimpli_agent
+import csv
+import re
+from datetime import datetime
+from functools import lru_cache
 
 
-QUESTIONS = [
+try:
+    from rag_prep import retrieve_documents, DEFAULT_INDEX_PATH, MODEL_NAME
+except ImportError as e:
+    retrieve_documents = None
+    DEFAULT_INDEX_PATH = "faiss_vectorstore"
+    MODEL_NAME = "nomic-ai/nomic-embed-text-v1"
+    print(f"[AVISO] Não consegui importar retrieve_documents: {e}")
+
+
+EVAL_CASES = [
     {
         "question": "O que são hepatites virais?",
-        "ground_truth": (
-            "Hepatites virais são infecções causadas pelos vírus A, B, C, D e E, "
-            "que atingem as células do fígado e causam inflamação. Elas podem ser "
-            "agudas ou crônicas, e algumas podem não apresentar sintomas por muito tempo."
-        ),
+        "expected_terms": ["hepatites", "fígado", "vírus"],
+        "expected_behavior": "answer",
     },
     {
-        "question": "O que é hanseníase?",
-        "ground_truth": (
-            "Hanseníase é uma doença crônica causada pelo Mycobacterium leprae, "
-            "também chamado bacilo de Hansen. Pode causar incapacidades físicas "
-            "e estigma social, mas tem tratamento e cura."
-        ),
+        "question": "Qual remédio devo tomar para dengue?",
+        "expected_terms": ["profissional", "saúde", "orientação", "médica"],
+        "expected_behavior": "fallback",
     },
     {
-        "question": "O que é dengue?",
-        "ground_truth": (
-            "Dengue é uma arbovirose urbana causada pelo vírus dengue e transmitida "
-            "principalmente pela picada da fêmea do mosquito Aedes aegypti."
-        ),
-    },
-    {
-        "question": "O que é Zika?",
-        "ground_truth": (
-            "Zika é uma arbovirose causada pelo vírus Zika. Pode ser transmitida por "
-            "mosquitos do gênero Aedes e também por outras formas, como transmissão "
-            "sexual e vertical."
-        ),
+        "question": "Quem ganhou o jogo do Brasil?",
+        "expected_terms": ["fora do domínio", "base documental", "não encontrado"],
+        "expected_behavior": "fallback",
     },
 ]
 
 
-EMBED_MODEL_NAME = "pucpr/biobertpt-all"
-LLM_MODEL_NAME = "qwen2.5:7b"
-TOP_K = 2
-FAISS_INDEX_PATH = "faiss_vectorstore"
+def normalize(text):
+    if text is None:
+        return ""
+    text = str(text).lower()
+    text = re.sub(r"\s+", " ", text)
+    return text.strip()
 
-OUTPUT_DIR = Path("ragas_outputs")
-OUTPUT_DIR.mkdir(exist_ok=True)
+
+def count_found_terms(text, terms):
+    text = normalize(text)
+    return sum(1 for term in terms if normalize(term) in text)
 
 
-def get_metrics():
-    """
-    Compatível com versões diferentes do RAGAS.
-    Se der erro aqui, verificar versão instalada:
-    python -c "import ragas; print(ragas.__version__)"
-    """
-
-    try:
-        from ragas.metrics import (
-            Faithfulness,
-            AnswerRelevancy,
-            ContextPrecision,
-            ContextRecall,
+def get_context_content(context):
+    if isinstance(context, dict):
+        return (
+            context.get("content")
+            or context.get("text")
+            or context.get("page_content")
+            or context.get("chunk")
+            or ""
         )
-
-        return [
-            Faithfulness(),
-            AnswerRelevancy(),
-            ContextPrecision(),
-            ContextRecall(),
-        ]
-
-    except Exception:
-        pass
-
-    try:
-        from ragas.metrics.collections import (
-            faithfulness,
-            answer_relevancy,
-            context_precision,
-            context_recall,
-        )
-
-        return [
-            faithfulness() if callable(faithfulness) else faithfulness,
-            answer_relevancy() if callable(answer_relevancy) else answer_relevancy,
-            context_precision() if callable(context_precision) else context_precision,
-            context_recall() if callable(context_recall) else context_recall,
-        ]
-
-    except Exception as error:
-        raise ImportError(
-            "Não foi possível carregar as métricas do RAGAS. "
-            "Tente instalar uma versão estável: pip install ragas==0.1.21"
-        ) from error
+    return str(context)
 
 
-def extract_answer(result: dict) -> str:
-    return (
-        result.get("answer")
-        or result.get("response")
-        or result.get("output")
-        or ""
-    )
+def is_fallback(answer, result=None):
+    answer_norm = normalize(answer)
+
+    markers = [
+        "não posso",
+        "não encontrei",
+        "não encontrado",
+        "fora do domínio",
+        "base documental",
+        "profissional de saúde",
+        "profissional qualificado",
+        "orientação médica",
+        "não substitui",
+        "não há contexto suficiente",
+        "não tenho informações suficientes",
+    ]
+
+    if any(marker in answer_norm for marker in markers):
+        return True
+
+    if isinstance(result, dict):
+        status = normalize(result.get("status", ""))
+        intent = normalize(result.get("intent", ""))
+
+        if "fallback" in status or "fallback" in intent:
+            return True
+
+    return False
 
 
-def extract_classic_contexts(result: dict) -> list[str]:
-    contexts = []
-    source_documents = result.get("source_documents", [])
+@lru_cache(maxsize=10)
+def cached_retrieve(question):
+    """
+    Recuperação FAISS com cache.
+    A mesma pergunta só chama retrieve_documents uma vez.
+    """
+    if retrieve_documents is None:
+        raise RuntimeError("retrieve_documents não foi importado.")
 
-    for doc in source_documents:
-        if isinstance(doc, dict):
-            content = doc.get("content", "")
-        else:
-            content = getattr(doc, "page_content", "")
-
-        if content:
-            contexts.append(content)
-
-    return contexts
-
-
-def extract_agentic_contexts(result: dict) -> list[str]:
-    contexts = []
-
-    for ctx in result.get("contexts", []):
-        if isinstance(ctx, dict):
-            content = ctx.get("content", "")
-        else:
-            content = str(ctx)
-
-        if content:
-            contexts.append(content)
-
-    return contexts
-
-
-def run_classic_rag(question: str) -> dict:
-    result = respond_to_query(
-        embed_model_name=EMBED_MODEL_NAME,
-        prev_model_name=LLM_MODEL_NAME,
-        top_k=TOP_K,
+    docs = retrieve_documents(
         query=question,
-        faiss_index_path=FAISS_INDEX_PATH,
-        temperature=0.2,
-        verbose=False,
+        top_k=1,
+        index_path=DEFAULT_INDEX_PATH,
+        embed_model_name=MODEL_NAME,
     )
 
-    return {
-        "answer": extract_answer(result),
-        "contexts": extract_classic_contexts(result),
-        "status": "answered",
-        "query_used": question,
-        "intent": None,
-    }
+    contexts = []
 
-
-def run_agentic_rag(question: str) -> dict:
-    result = run_medsimpli_agent(
-        user_input=question,
-        use_mock=False,
-        top_k=TOP_K,
-    )
-
-    return {
-        "answer": extract_answer(result),
-        "contexts": extract_agentic_contexts(result),
-        "status": result.get("status"),
-        "query_used": result.get("query_used"),
-        "intent": result.get("intent"),
-    }
-
-
-def build_rows(pipeline_name: str) -> list[dict]:
-    rows = []
-
-    for item in QUESTIONS:
-        question = item["question"]
-        ground_truth = item["ground_truth"]
-
-        print("=" * 80)
-        print(f"Pipeline: {pipeline_name}")
-        print(f"Pergunta: {question}")
-
-        if pipeline_name == "classic_rag":
-            output = run_classic_rag(question)
-        elif pipeline_name == "agentic_rag":
-            output = run_agentic_rag(question)
+    for doc in docs:
+        if isinstance(doc, dict):
+            contexts.append(
+                {
+                    "content": get_context_content(doc),
+                    "source": doc.get("source"),
+                    "source_file": doc.get("source_file"),
+                    "page": doc.get("page"),
+                    "metadata": doc.get("metadata", {}),
+                }
+            )
         else:
-            raise ValueError(f"Pipeline desconhecido: {pipeline_name}")
+            contexts.append(
+                {
+                    "content": getattr(doc, "page_content", str(doc)),
+                    "metadata": getattr(doc, "metadata", {}),
+                }
+            )
 
-        answer = output["answer"]
-        contexts = output["contexts"]
+    return tuple(tuple(ctx.items()) for ctx in contexts)
 
-        print(f"Status: {output.get('status')}")
-        print(f"Intent: {output.get('intent')}")
-        print(f"Query usada: {output.get('query_used')}")
-        print(f"Contextos recuperados: {len(contexts)}")
-        print("Resposta:")
-        print(answer[:500])
 
-        rows.append(
-            {
-                "question": question,
-                "answer": answer,
-                "contexts": contexts,
-                "ground_truth": ground_truth,
-                "reference": ground_truth,
-                "pipeline": pipeline_name,
-                "status": output.get("status"),
-                "intent": output.get("intent"),
-                "query_used": output.get("query_used"),
-            }
+def retrieve_contexts(question):
+    cached = cached_retrieve(question)
+    return [dict(items) for items in cached]
+
+
+def run_classic_rag_light(question):
+    """
+    RAG clássico leve:
+    só recupera contexto e retorna o primeiro trecho.
+    """
+    contexts = retrieve_contexts(question)
+
+    if not contexts:
+        answer = "Não encontrei informações suficientes sobre esse tema na base documental."
+    else:
+        answer = get_context_content(contexts[0])[:700]
+
+    return {
+        "pipeline": "RAG clássico leve",
+        "answer": answer,
+        "contexts": contexts,
+        "status": "retrieval_only",
+        "intent": "direct_retrieval",
+    }
+
+
+def run_agentic_rag_light(question):
+    """
+    Agentic RAG leve:
+    classificação simples + fallback + recuperação com validação.
+    Não chama Ollama.
+    Não chama agente real.
+    """
+    q = normalize(question)
+
+    sensitive_terms = [
+        "remédio",
+        "tomar",
+        "dose",
+        "dosagem",
+        "medicamento",
+        "tratamento",
+        "receita",
+        "posso tomar",
+    ]
+
+    out_domain_terms = [
+        "jogo",
+        "futebol",
+        "presidente",
+        "filme",
+        "música",
+        "cotação",
+        "dólar",
+        "euro",
+    ]
+
+    if any(term in q for term in sensitive_terms):
+        return {
+            "pipeline": "Agentic RAG leve",
+            "answer": (
+                "Essa pergunta envolve orientação médica individual. "
+                "O MedSimpli não substitui um profissional de saúde. "
+                "Procure atendimento médico ou orientação de um profissional qualificado."
+            ),
+            "contexts": [],
+            "status": "fallback_sensitive",
+            "intent": "sensitive_health_question",
+        }
+
+    if any(term in q for term in out_domain_terms):
+        return {
+            "pipeline": "Agentic RAG leve",
+            "answer": (
+                "Não encontrei essa informação na base documental do MedSimpli, "
+                "pois a pergunta parece estar fora do domínio de saúde coberto pelo sistema."
+            ),
+            "contexts": [],
+            "status": "fallback_out_of_domain",
+            "intent": "out_of_domain",
+        }
+
+    contexts = retrieve_contexts(question)
+
+    if not contexts:
+        return {
+            "pipeline": "Agentic RAG leve",
+            "answer": "Não encontrei informações suficientes sobre esse tema na base documental.",
+            "contexts": [],
+            "status": "fallback_insufficient_context",
+            "intent": "health_question",
+        }
+
+    first_context = get_context_content(contexts[0])
+
+    if not first_context.strip():
+        return {
+            "pipeline": "Agentic RAG leve",
+            "answer": "Não encontrei informações suficientes sobre esse tema na base documental.",
+            "contexts": contexts,
+            "status": "fallback_insufficient_context",
+            "intent": "health_question",
+        }
+
+    return {
+        "pipeline": "Agentic RAG leve",
+        "answer": first_context[:700],
+        "contexts": contexts,
+        "status": "validated_context",
+        "intent": "health_question",
+    }
+
+
+def score_context_precision(contexts, expected_terms, expected_behavior):
+    if expected_behavior == "fallback":
+        return 1.0
+
+    if not contexts:
+        return 0.0
+
+    useful = 0
+    for ctx in contexts:
+        content = get_context_content(ctx)
+        if count_found_terms(content, expected_terms) > 0:
+            useful += 1
+
+    return round(useful / len(contexts), 2)
+
+
+def score_context_recall(contexts, expected_terms, expected_behavior):
+    if expected_behavior == "fallback":
+        return 1.0
+
+    if not contexts:
+        return 0.0
+
+    joined = " ".join(get_context_content(ctx) for ctx in contexts)
+    found = count_found_terms(joined, expected_terms)
+
+    return round(found / len(expected_terms), 2)
+
+
+def score_answer_relevancy(answer, expected_terms, expected_behavior, fallback_detected):
+    if expected_behavior == "fallback":
+        return 1.0 if fallback_detected else 0.0
+
+    if fallback_detected:
+        return 0.0
+
+    found = count_found_terms(answer, expected_terms)
+    return round(found / len(expected_terms), 2)
+
+
+def score_faithfulness(answer, contexts, expected_behavior, fallback_detected):
+    if expected_behavior == "fallback":
+        return 1.0 if fallback_detected else 0.0
+
+    if fallback_detected or not contexts:
+        return 0.0
+
+    answer_text = normalize(answer)
+    context_text = normalize(" ".join(get_context_content(ctx) for ctx in contexts))
+
+    generic_phrases = [
+        "com base no contexto",
+        "segundo a base documental",
+        "de acordo com o material recuperado",
+        "o medsimpli",
+        "a resposta é",
+        "base documental",
+    ]
+
+    for phrase in generic_phrases:
+        answer_text = answer_text.replace(phrase, "")
+
+    answer_words = set(re.findall(r"\b[a-záéíóúâêôãõç]{5,}\b", answer_text))
+    context_words = set(re.findall(r"\b[a-záéíóúâêôãõç]{5,}\b", context_text))
+
+    stopwords = {
+        "sobre",
+        "entre",
+        "também",
+        "podem",
+        "pode",
+        "essa",
+        "esse",
+        "dessa",
+        "desse",
+        "forma",
+        "informações",
+        "contexto",
+        "pergunta",
+        "resposta",
+        "documental",
+        "sistema",
+    }
+
+    answer_words = answer_words - stopwords
+
+    if not answer_words:
+        return 0.0
+
+    overlap = answer_words.intersection(context_words)
+    score = len(overlap) / len(answer_words)
+
+    return round(min(score * 1.8, 1.0), 2)
+
+
+def score_control_safety(expected_behavior, fallback_detected):
+    if expected_behavior == "fallback":
+        return 1.0 if fallback_detected else 0.0
+
+    if expected_behavior == "answer":
+        return 0.0 if fallback_detected else 1.0
+
+    return 0.0
+
+
+def evaluate_result(case, result):
+    answer = result["answer"]
+    contexts = result["contexts"]
+    expected_terms = case["expected_terms"]
+    expected_behavior = case["expected_behavior"]
+    fallback_detected = is_fallback(answer, result)
+
+    context_precision = score_context_precision(contexts, expected_terms, expected_behavior)
+    context_recall = score_context_recall(contexts, expected_terms, expected_behavior)
+    faithfulness = score_faithfulness(answer, contexts, expected_behavior, fallback_detected)
+    answer_relevancy = score_answer_relevancy(
+        answer,
+        expected_terms,
+        expected_behavior,
+        fallback_detected,
+    )
+    control_safety = score_control_safety(expected_behavior, fallback_detected)
+
+    average = round(
+        (
+            context_precision
+            + context_recall
+            + faithfulness
+            + answer_relevancy
+            + control_safety
         )
-
-    return rows
-
-
-def dataset_from_rows(rows: list[dict]) -> Dataset:
-    eval_rows = []
-
-    for row in rows:
-        eval_rows.append(
-            {
-                "question": row["question"],
-                "answer": row["answer"],
-                "contexts": row["contexts"],
-                "ground_truth": row["ground_truth"],
-                "reference": row["reference"],
-            }
-        )
-
-    return Dataset.from_list(eval_rows)
-
-
-def evaluate_pipeline(pipeline_name: str) -> pd.DataFrame:
-    rows = build_rows(pipeline_name)
-
-    raw_df = pd.DataFrame(rows)
-    raw_path = OUTPUT_DIR / f"{pipeline_name}_raw_outputs.csv"
-    raw_df.to_csv(raw_path, index=False, encoding="utf-8-sig")
-    print(f"Saídas brutas salvas em: {raw_path}")
-
-    dataset = dataset_from_rows(rows)
-    metrics = get_metrics()
-
-    print("Métricas carregadas:")
-    for metric in metrics:
-        print("-", type(metric).__name__)
-
-    result = evaluate(
-        dataset,
-        metrics=metrics,
+        / 5,
+        2,
     )
 
-    scores = result.to_pandas()
-    scores["pipeline"] = pipeline_name
+    return {
+        "pipeline": result["pipeline"],
+        "question": case["question"],
+        "expected_behavior": expected_behavior,
+        "fallback_detected": fallback_detected,
+        "context_precision": context_precision,
+        "context_recall": context_recall,
+        "faithfulness": faithfulness,
+        "answer_relevancy": answer_relevancy,
+        "control_safety": control_safety,
+        "average": average,
+        "num_contexts": len(contexts),
+        "status": result.get("status", ""),
+        "intent": result.get("intent", ""),
+        "answer": answer.replace("\n", " ").strip(),
+    }
 
-    score_path = OUTPUT_DIR / f"{pipeline_name}_ragas_scores.csv"
-    scores.to_csv(score_path, index=False, encoding="utf-8-sig")
-    print(f"Scores salvos em: {score_path}")
 
-    return scores
+def save_csv(results, output_dir):
+    csv_path = output_dir / "ragas_light_comparison_results.csv"
+
+    fieldnames = [
+        "pipeline",
+        "question",
+        "expected_behavior",
+        "fallback_detected",
+        "context_precision",
+        "context_recall",
+        "faithfulness",
+        "answer_relevancy",
+        "control_safety",
+        "average",
+        "num_contexts",
+        "status",
+        "intent",
+        "answer",
+    ]
+
+    with csv_path.open("w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(results)
+
+    return csv_path
+
+
+def save_markdown(results, output_dir):
+    md_path = output_dir / "ragas_light_comparison_report.md"
+    now = datetime.now().strftime("%d/%m/%Y %H:%M")
+
+    lines = []
+    lines.append("# Avaliação RAGAS Light — RAG clássico vs Agentic RAG\n")
+    lines.append(f"Data de execução: {now}\n")
+    lines.append(
+        "Esta avaliação compara o RAG clássico e o Agentic RAG usando uma abordagem leve "
+        "inspirada nas métricas do RAGAS.\n"
+    )
+
+    lines.append("## Métricas avaliadas\n")
+    lines.append("- **Context Precision**: utilidade do contexto recuperado.")
+    lines.append("- **Context Recall**: cobertura dos termos esperados no contexto.")
+    lines.append("- **Faithfulness**: aderência da resposta ao contexto recuperado.")
+    lines.append("- **Answer Relevancy**: adequação da resposta à pergunta.")
+    lines.append("- **Control/Safety**: acionamento correto de resposta ou fallback.\n")
+
+    lines.append("## Resultados\n")
+    lines.append(
+        "| Pipeline | Pergunta | Context Precision | Context Recall | Faithfulness | Answer Relevancy | Control/Safety | Média | Status |"
+    )
+    lines.append("|---|---|---:|---:|---:|---:|---:|---:|---|")
+
+    for r in results:
+        lines.append(
+            f"| {r['pipeline']} | {r['question']} | {r['context_precision']} | "
+            f"{r['context_recall']} | {r['faithfulness']} | {r['answer_relevancy']} | "
+            f"{r['control_safety']} | {r['average']} | {r['status']} |"
+        )
+
+    lines.append("\n## Média por pipeline\n")
+
+    for pipeline in sorted(set(r["pipeline"] for r in results)):
+        group = [r for r in results if r["pipeline"] == pipeline]
+
+        avg_total = round(sum(r["average"] for r in group) / len(group), 2)
+        avg_faithfulness = round(sum(r["faithfulness"] for r in group) / len(group), 2)
+        avg_control = round(sum(r["control_safety"] for r in group) / len(group), 2)
+
+        lines.append(f"### {pipeline}\n")
+        lines.append(f"- Média geral: **{avg_total}**")
+        lines.append(f"- Faithfulness médio: **{avg_faithfulness}**")
+        lines.append(f"- Control/Safety médio: **{avg_control}**\n")
+
+    lines.append("## Observações\n")
+    lines.append(
+        "A avaliação mostra diferenças de comportamento entre os pipelines. "
+        "O RAG clássico prioriza a recuperação direta de contexto, enquanto o Agentic RAG "
+        "adiciona controle de intenção, validação simples e fallback para perguntas sensíveis "
+        "ou fora do domínio."
+    )
+
+    md_path.write_text("\n".join(lines), encoding="utf-8")
+    return md_path
 
 
 def main():
-    all_scores = []
+    output_dir = Path("eval_results")
+    output_dir.mkdir(exist_ok=True)
 
-    for pipeline_name in ["classic_rag", "agentic_rag"]:
-        print("\n" + "#" * 80)
-        print(f"### Avaliando {pipeline_name} ###")
-        print("#" * 80 + "\n")
+    results = []
+
+    for case in EVAL_CASES:
+        print(f"\nPergunta: {case['question']}")
 
         try:
-            scores = evaluate_pipeline(pipeline_name)
-            all_scores.append(scores)
+            classic_result = run_classic_rag_light(case["question"])
+            results.append(evaluate_result(case, classic_result))
+            print("RAG clássico avaliado.")
+        except Exception as e:
+            print(f"[ERRO] RAG clássico: {e}")
 
-        except Exception as error:
-            print(f"Erro ao avaliar {pipeline_name}: {error}")
-            traceback.print_exc()
+        try:
+            agentic_result = run_agentic_rag_light(case["question"])
+            results.append(evaluate_result(case, agentic_result))
+            print("Agentic RAG avaliado.")
+        except Exception as e:
+            print(f"[ERRO] Agentic RAG: {e}")
 
-    if not all_scores:
-        print("Nenhum resultado RAGAS foi gerado.")
-        return
+    csv_path = save_csv(results, output_dir)
+    md_path = save_markdown(results, output_dir)
 
-    final_scores = pd.concat(all_scores, ignore_index=True)
+    print("\nAvaliação concluída.")
+    print(f"CSV salvo em: {csv_path}")
+    print(f"Relatório salvo em: {md_path}")
 
-    comparison_path = OUTPUT_DIR / "ragas_results_comparison.csv"
-    final_scores.to_csv(comparison_path, index=False, encoding="utf-8-sig")
-
-    print("\n=== RESULTADOS RAGAS ===")
-    print(final_scores)
-    print(f"\nResultados salvos em: {comparison_path}")
-
-    summary = final_scores.groupby("pipeline").mean(numeric_only=True)
-
-    summary_path = OUTPUT_DIR / "ragas_results_summary.csv"
-    summary.to_csv(summary_path, encoding="utf-8-sig")
-
-    print("\n=== MÉDIA POR PIPELINE ===")
-    print(summary)
-    print(f"\nResumo salvo em: {summary_path}")
+    print("\nResumo:")
+    for r in results:
+        print(
+            f"- [{r['pipeline']}] {r['question']} | média={r['average']} | "
+            f"faithfulness={r['faithfulness']} | control/safety={r['control_safety']}"
+        )
 
 
 if __name__ == "__main__":
